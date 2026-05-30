@@ -96,7 +96,7 @@ export default function App() {
                 }`}
               >
                 <PenTool className="h-3.5 w-3.5" />
-                Sketsa Portal (Framing)
+                CAD Denah 2D
               </button>
               <button
                 onClick={() => setActiveTab("foundation")}
