@@ -19,7 +19,7 @@ import {
 } from "../types";
 
 interface AiAdvisorProps {
-  type: "beam" | "column" | "footplat" | "pile" | "pilecap";
+  type: "beam" | "column" | "footplat" | "pile" | "pilecap" | "framing";
   input: any;
   result: any;
 }
