@@ -168,34 +168,6 @@ Berikan laporan rekayasa profesional terstruktur dalam Bahasa Indonesia:
 3. **Penulangan Lentur Bawah (Tension Reinforcement Grid)**: Evaluasi luas tulangan baja terpasang vs rasio minimum (AsX_required = ${Math.round(result.AsX_required)} mm², AsY_required = ${Math.round(result.AsY_required)} mm²). Jelaskan mengapa pile cap membutuhkan detailing penjangkaran (hook anchor) yang kuat.
 4. **Petunjuk Pengecoran Pile Cap**: Rekomendasikan perawatan beton masif (mass concrete) karena tebalnya penampang pile cap seringkali memicu retak termal.
 `;
-    } else if (type === "framing") {
-      prompt = `
-Anda adalah seorang Ahli Perencanaan Struktur Portal Beton Bertulang Senior di Indonesia. Berikan tinjauan kegempaan (seismic framing review), evaluasi dimensi balok dan kolom, serta rekomendasi perbaikan struktur berdasarkan standar SNI 2847-2019.
-
-**SISTEM PORTAL YANG DI-SKETSA:**
-- Jumlah Kolom (Node): ${input.nodes.length} kolom
-- Jumlah Balok (Slab/Beam Spans): ${input.beams.length} balok
-- Status Keamanan Keseluruhan: ${result.overallStatusSafe ? "AMAN (Seluruh balok & kolom memenuhi syarat DCR)" : "BAHAYA (Beberapa elemen overstressed!)"}
-
-**RINCIAN ELEMEN SKETSA:**
-Columns:
-${input.nodes.map((n: any, i: number) => {
-  const r = result.nodes[n.id] || { PuTotal: 0, phiPn: 0, DCR: 0, isSafe: true };
-  return `- Kolom #${i+1} (Grid x:${n.gridX}, y:${n.gridY}): Dimensi ${n.b}x${n.h} mm, f'c ${n.fc} MPa, Beban Terpusat ${n.directLoad || 0} kN + Berat Sendiri. Total beban Pu = ${r.PuTotal.toFixed(1)} kN vs Kapasitas φPn = ${r.phiPn.toFixed(1)} kN [DCR = ${r.DCR.toFixed(2)}] -> Status: ${r.isSafe ? "AMAN" : "GAGAL (Overstressed)"}`;
-}).join('\n')}
-
-Beams:
-${input.beams.map((b: any, i: number) => {
-  const r = result.beams[b.id] || { spanLength: 0, Mu: 0, phiMn: 0, DCR_bending: 0, isSafe: true };
-  return `- Balok #${i+1}: Span ${r.spanLength.toFixed(1)} meter, Dimensi ${b.b}x${b.h} mm, Beban Merata q_u = ${b.uniformLoad.toFixed(1)} kN/m, Momen Lentur Mu = ${r.Mu.toFixed(1)} kNm vs Kapasitas φMn = ${r.phiMn.toFixed(1)} kNm [DCR Bending = ${r.DCR_bending.toFixed(2)}] -> Status: ${r.isSafe ? "AMAN" : "GAGAL"}`;
-}).join('\n')}
-
-Berikan analisis rekayasa terstruktur dalam Bahasa Indonesia yang mencakup:
-1. **Evaluasi Layout Grid Portal**: Tinjau kesesuaian bentang balok (span lengths) dan susunan kolom pembagi struktur.
-2. **Review Kuat Batas Balok & Kolom**: Bandingkan rasio kapasitas (DCR). Analisis apakah dimensi balok terlalu ramping (menyebabkan lendutan/momen terlalu besar) atau dimensi kolom kurang kokoh menopang beban tributary.
-3. **Konsep Strong Column-Weak Beam**: Berikan penjelasan pentingnya filosofi desain kegempaan nasional (Strong Column-Weak Beam) di mana kolom harus memiliki kapasitas minimal 1.2 kali lebih kuat dari balok yang berpotongan agar terhindar dari keruntuhan geser tiba-tiba.
-4. **Saran Praktis Lapangan**: Berikan penyetelan ulang dimensi (sizing), peningkatan mutu f'c, atau konfigurasi jarak sengkang di wilayah tumpuan daerah sendi plastis (plastic hinges).
-`;
     }
 
     const response = await ai.models.generateContent({
