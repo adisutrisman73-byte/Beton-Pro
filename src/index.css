@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  /* Custom Immersive UI Palette mapping */
+  --color-slate-950: #0b0f1a; /* Deeper space background */
+  --color-slate-900: #0f172a; /* Card header / panel background */
+  --color-slate-850: #131d35; /* Mid-tone slate container */
+  --color-slate-800: #1e293b; /* Borders and high-contrast lines */
+  --color-slate-700: #334155;
+
+  /* Accent mapping from general emerald theme to Immersive Electric Blue */
+  --color-emerald-400: #3b82f6;
+  --color-emerald-500: #2563eb;
+  --color-emerald-600: #1d4ed8;
+  --color-emerald-700: #1e40af;
+  --color-emerald-950: #172554;
+  --color-emerald-500\/20: rgba(37, 99, 235, 0.2);
+
+  /* Warm amber contrast */
+  --color-amber-400: #fbbf24;
+  --color-amber-350: #f59e0b;
+}
+
+/* Custom premium global styles */
+body {
+  background-color: #0b0f1a;
+  color: #cbd5e1;
+}
+
+/* Futuristic card glow and pulse animations */
+.glow-blue {
+  box-shadow: 0 0 15px rgba(37, 99, 235, 0.35);
+}
+
+.glow-emerald {
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.35);
+}
+
+.glow-rose {
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.35);
+}
+
+.glow-amber {
+  box-shadow: 0 0 15px rgba(245, 158, 11, 0.35);
+}
+
+/* Glass panel */
+.glass-panel {
+  background-color: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(30, 41, 59, 0.8);
+}
+
+@keyframes pulse-soft {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.005);
+  }
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}

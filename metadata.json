@@ -1,0 +1,6 @@
+{
+  "name": "Struktur Beton Bertulang",
+  "description": "Website analisis dan perhitungan otomatis balok dan kolom beton bertulang disertai diagram interaksi P-M real-time.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
