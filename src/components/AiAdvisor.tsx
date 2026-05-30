@@ -5,12 +5,23 @@
 
 import React, { useState } from "react";
 import { Sparkles, Loader2, MessageSquare, AlertCircle, Copy, Check } from "lucide-react";
-import { BeamInput, BeamAnalysisResult, ColumnInput, ColumnAnalysisResult } from "../types";
+import { 
+  BeamInput, 
+  BeamAnalysisResult, 
+  ColumnInput, 
+  ColumnAnalysisResult,
+  FootplatInput,
+  FootplatResult,
+  PileInput,
+  PileResult,
+  PileCapInput,
+  PileCapResult 
+} from "../types";
 
 interface AiAdvisorProps {
-  type: "beam" | "column";
-  input: BeamInput | ColumnInput;
-  result: BeamAnalysisResult | ColumnAnalysisResult;
+  type: "beam" | "column" | "footplat" | "pile" | "pilecap";
+  input: any;
+  result: any;
 }
 
 export default function AiAdvisor({ type, input, result }: AiAdvisorProps) {

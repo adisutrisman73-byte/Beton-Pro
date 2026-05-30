@@ -3,7 +3,19 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { BeamInput, BeamAnalysisResult, ColumnInput, ColumnAnalysisResult, PMPoint } from "../types";
+import { 
+  BeamInput, 
+  BeamAnalysisResult, 
+  ColumnInput, 
+  ColumnAnalysisResult, 
+  PMPoint,
+  FootplatInput,
+  FootplatResult,
+  PileInput,
+  PileResult,
+  PileCapInput,
+  PileCapResult
+} from "../types";
 
 export const Es = 200000; // Young's modulus of steel, MPa
 
@@ -472,3 +484,362 @@ export function analyzeColumn(input: ColumnInput): ColumnAnalysisResult {
     capacityRatio
   };
 }
+
+/**
+ * Footplat / Foundation Pad analysis (Analisis Footplat SNI 2847-2019)
+ */
+export function analyzeFootplat(input: FootplatInput): FootplatResult {
+  const { B, L, H, cover, columnB, columnH, fc, fy, Pu, MuB, MuL, qAllowable } = input;
+
+  const area = B * L;
+  // Volume based self weight (concrete density = 24 kN/m3)
+  const weightSelf = B * L * (H / 1000) * 24;
+  
+  // Total factored axial force including pile self weight
+  const PuTotal = Pu + 1.2 * weightSelf;
+
+  // Section Moduli (W) for bearing pressure calculations
+  const W_B = (L * B * B) / 6; // base modulus for bending in B direction
+  const W_L = (B * L * L) / 6; // base modulus for bending in L direction
+
+  // Bearing pressure: q = Pu/A +- M_B/W_B +- M_L/W_L
+  const qAxial = PuTotal / area;
+  const qMomB = MuB / W_B;
+  const qMomL = MuL / W_L;
+
+  const qMax = qAxial + qMomB + qMomL;
+  const qMin = Math.max(0, qAxial - qMomB - qMomL); // soil cannot take strain (tension), clip at 0
+  
+  const isSoilPreSafe = qMax <= qAllowable;
+  const DCR_soil = qMax / qAllowable;
+
+  // Effective depth (d)
+  const d = H - cover;
+
+  // 1. One-way shear check (Geser dua dimensi / geser balok)
+  // Critical section is at distance d from the column face on both directions.
+  const distCantilevL = (L - (columnH / 1000)) / 2; // meters
+  const distCantilevB = (B - (columnB / 1000)) / 2; // meters
+
+  const d_meters = d / 1000;
+  
+  // Determine shear plane distance
+  const shearPlaneL = distCantilevL - d_meters;
+  const shearPlaneB = distCantilevB - d_meters;
+
+  let V_oneWay = 0;
+  if (shearPlaneL > 0) {
+    V_oneWay = Math.max(V_oneWay, qMax * B * shearPlaneL);
+  }
+  if (shearPlaneB > 0) {
+    V_oneWay = Math.max(V_oneWay, qMax * L * shearPlaneB);
+  }
+
+  // One-way shear concrete limit phi * V_c = 0.75 * 0.17 * sqrt(f'c) * b * d
+  const phiV_oneWay = 0.75 * 0.17 * Math.sqrt(fc) * (B * 1000) * d * 1e-3; // kN
+  const isOneWayShearSafe = V_oneWay <= phiV_oneWay;
+  const DCR_shear1 = phiV_oneWay > 0 ? V_oneWay / phiV_oneWay : 0;
+
+  // 2. Punching Shear Check (Geser Pons вокруг колонны)
+  // Critical perimeter around column at distance d/2
+  const bo = 2 * (columnB + d) + 2 * (columnH + d); // mm
+  const punchArea_m2 = (columnB + d) * (columnH + d) * 1e-6; // m2
+  
+  const V_punch = Math.max(0, Pu - qMax * punchArea_m2); // kN
+  // Punching capacity: min of ACI standard formulas. Simplification: 0.33 * sqrt(fc) * bo * d
+  const phiV_punch = 0.75 * 0.33 * Math.sqrt(fc) * bo * d * 1e-3; // kN
+  const isPunchingSafe = V_punch <= phiV_punch;
+  const DCR_shear2 = phiV_punch > 0 ? V_punch / phiV_punch : 0;
+
+  // 3. Flexure calculation / Bending reinforcement
+  // Max Cantilever moment at column face
+  const Mu_designL = 0.5 * qMax * B * Math.pow(distCantilevL, 2); // kNm
+  
+  // Steel area math
+  let As_required = 0;
+  const b_width = B * 1000; // mm
+  const Rn = (Mu_designL * 1e6) / (0.9 * b_width * d * d); // MPa
+  
+  if (Rn > 0 && Rn < 0.85 * fc) {
+    const rho_req = (0.85 * fc / fy) * (1 - Math.sqrt(1 - (2 * Rn) / (0.85 * fc)));
+    As_required = rho_req * b_width * d;
+  } else {
+    As_required = 0.0018 * b_width * H; // absolute code minimum rebar
+  }
+
+  const As_provided = Math.max(As_required, 0.0018 * b_width * H);
+  const isReinforcementSafe = As_provided >= As_required;
+
+  return {
+    area,
+    weightSelf,
+    qMax,
+    qMin,
+    isSoilPreSafe,
+    d,
+    V_oneWay,
+    phiV_oneWay,
+    isOneWayShearSafe,
+    bo,
+    V_punch,
+    phiV_punch,
+    isPunchingSafe,
+    Mu_designL,
+    As_required,
+    As_provided,
+    isReinforcementSafe,
+    DCR_soil,
+    DCR_shear1,
+    DCR_shear2
+  };
+}
+
+/**
+ * Bored Pile / Driven Pile capacity (Structural & Geotechnical Analisis Tiang Pancang & Bor)
+ */
+export function analyzePile(input: PileInput): PileResult {
+  const { pileType, size, length, fc, fy, Pu, Mu, Vu, qsSkin, qpTip, rebarDiameter, rebarCount } = input;
+
+  // 1. Geometrical properties
+  let Ag = 0;
+  let perimeter = 0;
+  if (pileType === "circular_bored") {
+    Ag = (Math.PI * Math.pow(size, 2)) / 4;
+    perimeter = Math.PI * size;
+  } else {
+    Ag = size * size;
+    perimeter = 4 * size;
+  }
+
+  const singleRebarArea = (Math.PI * Math.pow(rebarDiameter, 2)) / 4;
+  const Ast = rebarCount * singleRebarArea;
+  const rho = Ast / Ag;
+
+  // 2. Geotechnical Load capacity (Aman dukung tanah)
+  const areaMeters = Ag * 1e-6;
+  const perimeterMeters = perimeter * 1e-3;
+
+  // Ultimate capacity Qu = Qs + Qp
+  const Q_skin = perimeterMeters * length * qsSkin; // kN
+  const Q_bearing = areaMeters * qpTip; // kN
+  const Q_ultimate = Q_skin + Q_bearing;
+  
+  // Allowable capacity with Safety Factor of 2.5
+  const Q_allowable = Q_ultimate / 2.5;
+  const isGeotechSafe = Pu <= Q_allowable;
+  const DCR_geotech = Q_allowable > 0 ? Pu / Q_allowable : 0;
+
+  // 3. Structural capacity (column standard reduction)
+  // Concentric compression formula
+  const Pn0 = (0.85 * fc * (Ag - Ast) + fy * Ast) * 1e-3; // kN
+  const PnMax = 0.80 * Pn0;
+  const phiPnMax = 0.65 * PnMax; // standard tied check factor
+  const isAxialStructuralSafe = Pu <= phiPnMax;
+  const DCR_structural = phiPnMax > 0 ? Pu / phiPnMax : 0;
+
+  // 4. Structural shear
+  const Vc = 0.17 * Math.sqrt(fc) * Ag * 1e-3; // concrete shear limit, kN
+  const phiVc = 0.75 * Vc;
+  const isShearStructuralSafe = Vu <= phiVc;
+
+  return {
+    Ag,
+    Ast,
+    rho,
+    Q_skin,
+    Q_bearing,
+    Q_ultimate,
+    Q_allowable,
+    PnMax,
+    phiPnMax,
+    isAxialStructuralSafe,
+    isGeotechSafe,
+    Vc,
+    phiVc,
+    isShearStructuralSafe,
+    DCR_geotech,
+    DCR_structural
+  };
+}
+
+/**
+ * Pile Cap Analytical Engine
+ * Configures layout, shear punching, and pile spacing verification.
+ */
+export function analyzePileCap(input: PileCapInput): PileCapResult {
+  const { pileCount, pileSpacing, pileDiameter, capB, capL, capH, columnB, columnH, fc, fy, Pu, MuX, MuY, cover } = input;
+
+  const d = capH - cover;
+
+  // Geometrical pile center coordinates relative to column centroid (0,0)
+  // Let's model common configuration standards:
+  // We'll calculate the sum of coordinates squared (sum_x2, sum_y2) to distribute moment
+  let pileCoordinates: { x: number; y: number }[] = [];
+  const s = pileSpacing; // mm
+
+  switch (pileCount) {
+    case 2:
+      pileCoordinates = [
+        { x: -s / 2, y: 0 },
+        { x: s / 2, y: 0 }
+      ];
+      break;
+    case 3: {
+      const h_tri = (s * Math.sqrt(3)) / 2;
+      pileCoordinates = [
+        { x: -s / 2, y: -h_tri / 3 },
+        { x: s / 2, y: -h_tri / 3 },
+        { x: 0, y: (2 * h_tri) / 3 }
+      ];
+      break;
+    }
+    case 4:
+    default:
+      pileCoordinates = [
+        { x: -s / 2, y: -s / 2 },
+        { x: s / 2, y: -s / 2 },
+        { x: -s / 2, y: s / 2 },
+        { x: s / 2, y: s / 2 }
+      ];
+      break;
+    case 5:
+      pileCoordinates = [
+        { x: -s / 2, y: -s / 2 },
+        { x: s / 2, y: -s / 2 },
+        { x: -s / 2, y: s / 2 },
+        { x: s / 2, y: s / 2 },
+        { x: 0, y: 0 }
+      ];
+      break;
+    case 6:
+      pileCoordinates = [
+        { x: -s / 2, y: -s },
+        { x: s / 2, y: -s },
+        { x: -s / 2, y: 0 },
+        { x: s / 2, y: 0 },
+        { x: -s / 2, y: s },
+        { x: s / 2, y: s }
+      ];
+      break;
+    case 9:
+      pileCoordinates = [
+        { x: -s, y: -s }, { x: 0, y: -s }, { x: s, y: -s },
+        { x: -s, y: 0 },  { x: 0, y: 0 },  { x: s, y: 0 },
+        { x: -s, y: s },  { x: 0, y: s },  { x: s, y: s }
+      ];
+      break;
+  }
+
+  // Calculate sum(x^2) and sum(y^2) in meters for pile load distribution
+  let sum_x2 = 0;
+  let sum_y2 = 0;
+  pileCoordinates.forEach(pt => {
+    sum_x2 += Math.pow(pt.x * 1e-3, 2);
+    sum_y2 += Math.pow(pt.y * 1e-3, 2);
+  });
+
+  // Calculate load per pile (factored load)
+  // Pi = P/n +- Mx*y/sum_y2 +- My*x/sum_x2
+  let maxPileLoad = -999999;
+  let minPileLoad = 999999;
+
+  pileCoordinates.forEach(pt => {
+    const xM = pt.x * 1e-3;
+    const yM = pt.y * 1e-3;
+    
+    let load = Pu / pileCount;
+    if (sum_y2 > 0) load += (MuX * yM) / sum_y2;
+    if (sum_x2 > 0) load += (MuY * xM) / sum_x2;
+
+    if (load > maxPileLoad) maxPileLoad = load;
+    if (load < minPileLoad) minPileLoad = load;
+  });
+
+  // Structural compression limit per pile (assumed 1200 kN default or calculated)
+  const phiPn_pileSelf = 1500; // Standard allowable support capacity in kN for typical 40cm-50cm piles
+  const isPileOverloaded = maxPileLoad > phiPn_pileSelf;
+  const DCR_pileLoad = phiPn_pileSelf > 0 ? maxPileLoad / phiPn_pileSelf : 0;
+
+  // Bending moments at face of column
+  // Moment caused by piles lying outside the column face plane.
+  // distance column face = columnSize / 2
+  const distColFaceX = (columnB / 2); // mm
+  const distColFaceY = (columnH / 2); // mm
+
+  let MuX_critical = 0;
+  let MuY_critical = 0;
+
+  pileCoordinates.forEach(pt => {
+    const x_offset = Math.abs(pt.x);
+    const y_offset = Math.abs(pt.y);
+
+    const pileP = Pu / pileCount; // use average simplified load for conservative design strip
+
+    if (x_offset > distColFaceX) {
+      MuY_critical += pileP * ((x_offset - distColFaceX) * 1e-3);
+    }
+    if (y_offset > distColFaceY) {
+      MuX_critical += pileP * ((y_offset - distColFaceY) * 1e-3);
+    }
+  });
+
+  // Required Reinforcement Areas X and Y
+  const capB_mm = capB * 1000;
+  const capL_mm = capL * 1000;
+  
+  // X direction steel (using critical MuY)
+  let AsX_required = 0.0018 * capB_mm * capH;
+  const RnX = (MuY_critical * 1e6) / (0.9 * capB_mm * d * d);
+  if (RnX > 0 && RnX < 0.85 * fc) {
+    const rho = (0.85 * fc / fy) * (1 - Math.sqrt(1 - (2 * RnX) / (0.85 * fc)));
+    AsX_required = Math.max(AsX_required, rho * capB_mm * d);
+  }
+
+  // Y direction steel (critical MuX)
+  let AsY_required = 0.0018 * capL_mm * capH;
+  const RnY = (MuX_critical * 1e6) / (0.9 * capL_mm * d * d);
+  if (RnY > 0 && RnY < 0.85 * fc) {
+    const rho = (0.85 * fc / fy) * (1 - Math.sqrt(1 - (2 * RnY) / (0.85 * fc)));
+    AsY_required = Math.max(AsY_required, rho * capL_mm * d);
+  }
+
+  // Punching shear around column
+  // Perimeter bo
+  const bo_column = 2 * (columnB + d) + 2 * (columnH + d);
+  const punchArea_col = (columnB + d) * (columnH + d) * 1e-6; // m2
+  const Vu_punchColumn = Math.max(0, Pu - (Pu / pileCount) * (punchArea_col > 0.5 ? 1 : 0)); // simple approximation
+  const phiVu_punchColumn = 0.75 * 0.33 * Math.sqrt(fc) * bo_column * d * 1e-3; // kN
+  const isColumnPunchSafe = Vu_punchColumn <= phiVu_punchColumn;
+  const DCR_columnPunch = phiVu_punchColumn > 0 ? Vu_punchColumn / phiVu_punchColumn : 0;
+
+  // Punching shear around corner single pile
+  const bo_pile = Math.PI * (pileDiameter + d); // circular pile perimeter
+  const Vu_punchPile = maxPileLoad; // individual pile force
+  const phiVu_punchPile = 0.75 * 0.33 * Math.sqrt(fc) * bo_pile * d * 1e-3; // kN
+  const isPilePunchSafe = Vu_punchPile <= phiVu_punchPile;
+  const DCR_pilePunch = phiVu_punchPile > 0 ? Vu_punchPile / phiVu_punchPile : 0;
+
+  return {
+    d,
+    maxPileLoad,
+    minPileLoad,
+    phiPn_pileSelf,
+    isPileOverloaded,
+    MuX_critical,
+    MuY_critical,
+    AsX_required,
+    AsY_required,
+    bo_column,
+    Vu_punchColumn,
+    phiVu_punchColumn,
+    isColumnPunchSafe,
+    bo_pile,
+    Vu_punchPile,
+    phiVu_punchPile,
+    isPilePunchSafe,
+    DCR_pileLoad,
+    DCR_columnPunch,
+    DCR_pilePunch
+  };
+}
+

@@ -74,8 +74,7 @@ Tulis analisis terstruktur yang padat dan praktis dalam Bahasa Indonesia yang be
 
 Jaga agar nada profesional, mendidik, dan aplikatif untuk civitas teknik/praktisi proyek di Indonesia. Gunakan format Markdown yang rapi dengan poin-poin yang mudah dibaca.
 `;
-    } else {
-      // Column
+    } else if (type === "column") {
       prompt = `
 Anda adalah seorang Ahli Struktur Beton Bertulang Senior di Indonesia. Berikan tinjauan profesional dan rekomendasi optimasi untuk desain KOLOM beton bertulang berikut ini berdasarkan standar SNI 2847-2019 (atau ACI 318-19).
 
@@ -100,6 +99,74 @@ Tulis analisis terstruktur yang padat dan praktis dalam Bahasa Indonesia yang be
 4. **Ketentuan Sengkang Ikat (Sengkang Kolom)**: Rekomendasikan spasi sengkang ikat kolom berdasarkan peraturan (misal: minimum dari 16x diameter tulangan utama, 48x diameter sengkang, atau dimensi terkecil kolom).
 
 Jaga agar nada profesional, mendidik, dan aplikatif untuk praktisi lapangan di Indonesia. Gunakan format Markdown yang rapi dengan poin-poin yang mudah dibaca.
+`;
+    } else if (type === "footplat") {
+      prompt = `
+Anda adalah seorang Ahli Geoteknis dan Struktur Pondasi di Indonesia. Berikan rekayasa penilaian, review keamanan, dan petunjuk konstruksi untuk Pondasi Telapak (Footplat / Pad Footing) berdasarkan SNI 2847-2019 dan SNI 8460:2017 (Geoteknik).
+
+**INPUT DESAIN FOOTPLAT:**
+- Ukuran Pad: Lebar B = ${input.B} meter, Panjang L = ${input.L} meter, Tebal H = ${input.H} mm
+- Kekuatan Material: Beton f'c = ${input.fc} MPa, Baja fy = ${input.fy} MPa
+- Beban kolom Ultimate: Aksial Pu = ${input.Pu} kN, Momen B = ${input.MuB} kNm, Momen L = ${input.MuL} kNm
+- Tahanan Izin Tanah Aktual: qAllowable = ${input.qAllowable} kPa (kN/m²)
+
+**HASIL INTEGRASI STATIK & KEKUATAN:**
+- Tegangan Kontak Maksimum ditiang bawah: qMax = ${result.qMax.toFixed(2)} kPa vs Tegangan Izin Tanah = ${input.qAllowable} kPa
+- Status Tegangan Tanah: ${result.isSoilPreSafe ? "AMAN (Di bawah daya dukung izin)" : "BAHAYA (Overstressed / melebih tanah izin!)"}
+- Tinggi Efektif d = ${result.d} mm
+- Geser Satu Arah (One-Way Beam Shear): Demand Vu = ${result.V_oneWay.toFixed(2)} kN vs φVc = ${result.phiV_oneWay.toFixed(2)} kN -> STATUS: ${result.isOneWayShearSafe ? "Aman" : "Gagal / Terlalu Tipis!"}
+- Geser Dua Arah (Two-Way Punching Shear): Demand Vu = ${result.V_punch.toFixed(2)} kN vs φVc = ${result.phiV_punch.toFixed(2)} kN -> STATUS: ${result.isPunchingSafe ? "Aman" : "Gagal Pons / Bahaya Punch!"}
+- Momen Lentur Desain Cantilever: Mu = ${result.Mu_designL.toFixed(2)} kNm
+- Luas Baja Tarik yang Dibutuhkan: As_required = ${Math.round(result.As_required)} mm²
+
+Tulis analisis sistematis dalam Bahasa Indonesia yang mencakup:
+1. **Evaluasi Keamanan Tanah (Geotechnic Check)**: Cara mendistribusikan tegangan tanah dan mitigasi jika ukuran footplat kurang lebar.
+2. **Evaluasi Ketebalan Pad terhadap Geser Punching**: Mengapa geser pons krusial dalam pondasi telapak, analisa ketebalan pad saat ini.
+3. **Analisa Kebutuhan Tulangan**: Analisa ekonomis tulangan terpasang (As_provided = ${Math.round(result.As_provided)} mm²) dan arah penyetelan besi sengkang/tulangan telapak di lapangan.
+4. **Petunjuk Konstruksi**: Berikan saran kedalaman minimum pondasi (dari muka tanah asli) dan perlindungan karat baja (selimut beton pondasi minimal 50-70mm).
+`;
+    } else if (type === "pile") {
+      prompt = `
+Anda adalah Geotechnical & Deep Foundation Engineer di Indonesia. Berikan tinjauan komprehensif untuk tiang pondasi dalam (Bored Pile atau Tiang Pancang) berdasarkan standar ketahanan gempa SNI 2847-2019 dan SNI 8460-2017.
+
+**INPUT DESAIN TIANG:**
+- Jenis Tiang: ${input.pileType === "circular_bored" ? "Bored Pile (Bulat Cor di tempat)" : "Tiang Pancang (Persegi Precast)"}
+- Dimensi: Diameter/Lebar = ${input.size} mm, Kedalaman Tertanam = ${input.length} meter
+- Beban Kerja Tiang: Aksial Pu = ${input.Pu} kN, Momen Mu = ${input.Mu} kNm, Geser Vu = ${input.Vu} kN
+- Tapis Gesek Selimut (Skin Friction): qs = ${input.qsSkin} kPa, Tahanan Ujung (Tip End): qp = ${input.qpTip} kPa
+
+**HASIL EVALUASI STRUKTURAL & GEOTEKNIS:**
+- Daya Dukung Geoteknis Izin (dengan SF 2.5): Q_allowable = ${result.Q_allowable.toFixed(2)} kN vs Desain Kerja Pu = ${input.Pu} kN -> STATUS: ${result.isGeotechSafe ? "Aman Geoteknis" : "GAGAL GEOTEKNIS (Tiang akan amblas!)"}
+- Kapasitas Struktural Rencana φPn_max = ${result.phiPnMax.toFixed(2)} kN -> STATUS: ${result.isAxialStructuralSafe ? "Aman struktural aksial" : "GAGAL STRUKTURAL (Beton terancam runtuh)"}
+- Kapasitas Geser Struktural φVc = ${result.phiVc.toFixed(2)} kN vs Beban Geser Vu = ${input.Vu} kN -> STATUS: ${result.isShearStructuralSafe ? "Aman Geser" : "Gagal Geser!"}
+
+Tulis analisis mendalam dalam Bahasa Indonesia yang berfokus pada:
+1. **Keamanan Interaksi Tanah-Struktur (Soil-Structure Dynamic)**: Bandingkan kontribusi gesekan selimut Q_skin (${result.Q_skin.toFixed(1)} kN) vs tahanan ujung Q_bearing (${result.Q_bearing.toFixed(1)} kN). Manakah yang dominan?
+2. **Kesesuaian Struktural Tiang**: Menilai kekuatan material beton f'c = ${input.fc} MPa dan rasio tulangan besi spiral/longitudinal ($\rho$ = ${(result.rho * 100).toFixed(2)}%).
+3. **Rekomendasi Konstruksi Lapangan**:
+   - Untuk Bored Pile: Mitigasi longsor lubang bor (bentonite slurry), penempatan keranjang besi agar tidak terangkat saat pengecoran, dan pembersihan lumpur dasar lubang bor.
+   - Untuk Tiang Pancang: Mitigasi retak tiang akibat palu pancang (pile driving stresses) dan fenomena heaving (tanah naik).
+`;
+    } else if (type === "pilecap") {
+      prompt = `
+Anda adalah seorang Ahli Struktur Khusus Pondasi Dalam di Indonesia. Lakukan audit teknis struktural dan analisis keamanan untuk Pile Cap (Tutup Tiang Kelompok) berikut ini berdasarkan kaidah SNI 2847-2019/ACI 318-19.
+
+**INPUT DESAIN PILE CAP:**
+- Kelompok Tiang: sejumlah ${input.pileCount} Tiang, Spacing antar Tiang s = ${input.pileSpacing} mm, Diameter Tiang = ${input.pileDiameter} mm
+- Ukuran Cap: Lebar B = ${input.capB} m, Panjang L = ${input.capL} m, Tebal H = ${input.capH} mm
+- Beban Kolom: Aksial Pu = ${input.Pu} kN, Momen X = ${input.MuX} kNm, Momen Y = ${input.MuY} kNm
+
+**HASIL ANALISIS PILE CAP:**
+- Beban Terbesar pada Tiang Tunggal: P_max = ${result.maxPileLoad.toFixed(2)} kN vs Kapasitas Tiang Izin = ${result.phiPn_pileSelf} kN -> STATUS: ${result.isPileOverloaded ? "OVERLOADED (Tiang terancam retak/gagal!)" : "Aman dari Overload"}
+- Area Geser Pons Kolom: Perimeter bo = ${result.bo_column} mm, Beban Pons Vu = ${result.Vu_punchColumn.toFixed(1)} kN vs Kapasitas Geser Pons φVc = ${result.phiVu_punchColumn.toFixed(1)} kN -> STATUS: ${result.isColumnPunchSafe ? "Aman Terhadap Pons Kolom" : "GAGAL GESER PONS KOLOM!"}
+- Area Geser Pons Tiang sudut: Vu_punch = ${result.Vu_punchPile.toFixed(1)} kN vs Kapasitas pons tiang φVc = ${result.phiVu_punchPile.toFixed(1)} kN -> STATUS: ${result.isPilePunchSafe ? "Aman Terhadap Pons Tiang" : "GAGAL GESER PONS TIANG!"}
+- Momen Lentur Desain Penting: Mu_X = ${result.MuX_critical.toFixed(1)} kNm, Mu_Y = ${result.MuY_critical.toFixed(1)} kNm
+
+Berikan laporan rekayasa profesional terstruktur dalam Bahasa Indonesia:
+1. **Analisa Distribusi Gaya**: Menafsirkan gaya transmisi dari kolom ke tiang-tiang pancang. Apakah momen eksentrisitas memicu beban tiang yang tidak merata?
+2. **Kekuatan Geser Pons (Punching Shear Crucial Audit)**: Mengulas ketahanan pile cap terhadap jebolnya tiang pancang tunggal maupun tiang kelompok di bawah kolom.
+3. **Penulangan Lentur Bawah (Tension Reinforcement Grid)**: Evaluasi luas tulangan baja terpasang vs rasio minimum (AsX_required = ${Math.round(result.AsX_required)} mm², AsY_required = ${Math.round(result.AsY_required)} mm²). Jelaskan mengapa pile cap membutuhkan detailing penjangkaran (hook anchor) yang kuat.
+4. **Petunjuk Pengecoran Pile Cap**: Rekomendasikan perawatan beton masif (mass concrete) karena tebalnya penampang pile cap seringkali memicu retak termal.
 `;
     }
 

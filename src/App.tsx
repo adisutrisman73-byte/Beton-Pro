@@ -4,12 +4,13 @@
  */
 
 import React, { useState } from "react";
-import { Hammer, CircleGauge, Award, BookOpen, Layers, ShieldCheck, Cpu } from "lucide-react";
+import { Hammer, CircleGauge, Award, BookOpen, Layers, ShieldCheck, Cpu, Compass } from "lucide-react";
 import BeamCalculator from "./components/BeamCalculator";
 import ColumnCalculator from "./components/ColumnCalculator";
+import FoundationCalculator from "./components/FoundationCalculator";
 import RebarGuide from "./components/RebarGuide";
 
-type ActiveTab = "beam" | "column" | "rebars";
+type ActiveTab = "beam" | "column" | "foundation" | "rebars";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>("beam");
@@ -86,6 +87,17 @@ export default function App() {
                 Kolom (Column)
               </button>
               <button
+                onClick={() => setActiveTab("foundation")}
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-md text-xs font-semibold tracking-wide transition-all cursor-pointer ${
+                  activeTab === "foundation"
+                    ? "bg-blue-600 text-white shadow-[0_0_12px_rgba(37,99,235,0.4)]"
+                    : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                <Compass className="h-3.5 w-3.5" />
+                Pondasi (Foundation)
+              </button>
+              <button
                 onClick={() => setActiveTab("rebars")}
                 className={`flex items-center gap-2 px-3.5 py-1.5 rounded-md text-xs font-semibold tracking-wide transition-all cursor-pointer ${
                   activeTab === "rebars"
@@ -106,6 +118,7 @@ export default function App() {
         
         {activeTab === "beam" && <BeamCalculator />}
         {activeTab === "column" && <ColumnCalculator />}
+        {activeTab === "foundation" && <FoundationCalculator />}
         {activeTab === "rebars" && <RebarGuide />}
 
       </main>
