@@ -67,6 +67,7 @@ export interface ColumnInput {
   rebarRows: {
     depth: number; // distance from top fiber, mm
     count: number; // number of bars in this row
+    diameter?: number; // customized diameter for this row, mm
   }[];
 }
 

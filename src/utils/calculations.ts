@@ -233,10 +233,11 @@ export function analyzeColumn(input: ColumnInput): ColumnAnalysisResult {
   const Ag = b * h;
   
   // Calculate total steel area Ast
-  const singleBarArea = (Math.PI * Math.pow(rebarDiameter, 2)) / 4;
   let Ast = 0;
   for (const row of rebarRows) {
-    Ast += row.count * singleBarArea;
+    const rowDiameter = row.diameter ?? rebarDiameter;
+    const rowBarArea = (Math.PI * Math.pow(rowDiameter, 2)) / 4;
+    Ast += row.count * rowBarArea;
   }
 
   const rho = Ast / Ag;
@@ -276,7 +277,9 @@ export function analyzeColumn(input: ColumnInput): ColumnAnalysisResult {
     let extremeSteelDepth = 0;
 
     for (const row of rebarRows) {
-      const rowArea = row.count * singleBarArea;
+      const rowDiameter = row.diameter ?? rebarDiameter;
+      const rowBarArea = (Math.PI * Math.pow(rowDiameter, 2)) / 4;
+      const rowArea = row.count * rowBarArea;
       // Strain in this steel row (compression positive, tension negative)
       const strain = 0.003 * (c - row.depth) / c;
       

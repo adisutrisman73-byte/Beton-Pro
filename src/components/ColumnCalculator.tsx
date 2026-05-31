@@ -20,9 +20,17 @@ export default function ColumnCalculator() {
   const [Pu, setPu] = useState<string | number>(800); // kN
   const [Mu, setMu] = useState<string | number>(120); // kNm
 
-  // Rebar settings
-  const [rebarDiameter, setRebarDiameter] = useState<number>(22); // D22
-  const [totalBarsCount, setTotalBarsCount] = useState<number>(8); // total rebars around perimeter
+  // Unique X and Y Rebar configuration states
+  const [rebarDiameterX, setRebarDiameterX] = useState<number>(22); // e.g. D22
+  const [rebarCountX, setRebarCountX] = useState<number>(3); // nx (bars on top and bottom faces)
+  const [rebarDiameterY, setRebarDiameterY] = useState<number>(19); // e.g. D19
+  const [rebarCountY, setRebarCountY] = useState<number>(3); // ny (bars/rows along sides/depth)
+
+  // Additional settings for flat column & slenderness checks
+  const [columnHeightLu, setColumnHeightLu] = useState<string | number>(3000); // mm
+  const [kFactor, setKFactor] = useState<number>(1.0); // k factor for slenderness checks
+  const [seismicKds, setSeismicKds] = useState<string>("KDS_D_F"); // KDS level
+  const [stirrupDiameterColumn, setStirrupDiameterColumn] = useState<number>(10); // stirrup mm
 
   const [result, setResult] = useState<ColumnAnalysisResult | null>(null);
   
@@ -31,39 +39,26 @@ export default function ColumnCalculator() {
   const [mousePos, setMousePos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const svgRef = useRef<SVGSVGElement | null>(null);
 
-  // Auto layout rows based on standard symmetric perimeter arrangement
-  const generateSymmetricRows = (totalCount: number, height: number, coverDist: number) => {
-    const list: { depth: number; count: number }[] = [];
+  // Auto layout rows based on independent X and Y reinforcement selections
+  const generateXYRows = (nx: number, ny: number, height: number, coverDist: number, diaX: number, diaY: number) => {
+    const list: { depth: number; count: number; diameter: number }[] = [];
     const usableH = height - 2 * coverDist;
 
-    if (totalCount <= 4) {
-      // 4 corners
-      list.push({ depth: coverDist, count: 2 });
-      list.push({ depth: height - coverDist, count: 2 });
-    } else if (totalCount === 6) {
-      // 2 top, 2 middle, 2 bottom
-      list.push({ depth: coverDist, count: 2 });
-      list.push({ depth: coverDist + usableH / 2, count: 2 });
-      list.push({ depth: height - coverDist, count: 2 });
-    } else if (totalCount === 8) {
-      // 3 top, 2 middle, 3 bottom
-      list.push({ depth: coverDist, count: 3 });
-      list.push({ depth: coverDist + usableH / 2, count: 2 });
-      list.push({ depth: height - coverDist, count: 3 });
-    } else if (totalCount === 10) {
-      // 3 top, 4 middle (2 rows of 2), 3 bottom
-      list.push({ depth: coverDist, count: 3 });
-      list.push({ depth: coverDist + usableH / 3, count: 2 });
-      list.push({ depth: coverDist + (2 * usableH) / 3, count: 2 });
-      list.push({ depth: height - coverDist, count: 3 });
-    } else {
-      // 12 or more: distribute evenly as 4 corners + sides
-      // Let's assume 4 top, 4 middle (2 rows of 2), 4 bottom
-      list.push({ depth: coverDist, count: 4 });
-      list.push({ depth: coverDist + usableH / 3, count: 2 });
-      list.push({ depth: coverDist + (2 * usableH) / 3, count: 2 });
-      list.push({ depth: height - coverDist, count: 4 });
+    // Top Row at y = coverDist: contains nx bars of diaX
+    list.push({ depth: coverDist, count: nx, diameter: diaX });
+
+    // Intermediate rows: ny represents the total rows along depth. 
+    // We add middle rows if ny > 2. Each intermediate row has 2 bars (left, right) of diaY
+    if (ny > 2) {
+      for (let j = 1; j < ny - 1; j++) {
+        const rowDepth = coverDist + (j / (ny - 1)) * usableH;
+        list.push({ depth: rowDepth, count: 2, diameter: diaY });
+      }
     }
+
+    // Bottom Row at y = height - coverDist: contains nx bars of diaX
+    list.push({ depth: height - coverDist, count: nx, diameter: diaX });
+
     return list;
   };
 
@@ -76,7 +71,7 @@ export default function ColumnCalculator() {
     const safePu = parseFloat(Pu as string) || 0;
     const safeMu = Math.max(0, parseFloat(Mu as string) || 0);
 
-    const rows = generateSymmetricRows(totalBarsCount, safeH, safeCover);
+    const rows = generateXYRows(rebarCountX, rebarCountY, safeH, safeCover, rebarDiameterX, rebarDiameterY);
     const input: ColumnInput = {
       b: safeB,
       h: safeH,
@@ -85,12 +80,12 @@ export default function ColumnCalculator() {
       fy: safeFy,
       Pu: safePu,
       Mu: safeMu,
-      rebarDiameter,
+      rebarDiameter: rebarDiameterX, // fallback diameter
       rebarRows: rows,
     };
     const ans = analyzeColumn(input);
     setResult(ans);
-  }, [b, h, cover, fc, fy, Pu, Mu, rebarDiameter, totalBarsCount]);
+  }, [b, h, cover, fc, fy, Pu, Mu, rebarDiameterX, rebarCountX, rebarDiameterY, rebarCountY]);
 
   if (!result) return null;
 
@@ -112,8 +107,8 @@ export default function ColumnCalculator() {
       fy: safeFy,
       Pu: safePu,
       Mu: safeMu,
-      rebarDiameter,
-      rebarRows: generateSymmetricRows(totalBarsCount, safeH, safeCover)
+      rebarDiameter: rebarDiameterX,
+      rebarRows: generateXYRows(rebarCountX, rebarCountY, safeH, safeCover, rebarDiameterX, rebarDiameterY)
     };
   };
 
@@ -207,6 +202,31 @@ export default function ColumnCalculator() {
   // Draw lines to the axes
   const xZeroAxisY = paddingY + plotH - ((0 - minP) / pSpan) * plotH;
 
+  // === ANALISIS KOLOM PIPIH & KELANGSINGAN ===
+  const bNum = Math.max(100, parseFloat(b as string) || 400);
+  const hNum = Math.max(100, parseFloat(h as string) || 400);
+  const fcNum = Math.max(5, parseFloat(fc as string) || 30);
+  const PuNum = parseFloat(Pu as string) || 0;
+
+  const aspectColumn = hNum / bNum; // rasio aspek kolom
+  const isFlatColumn = aspectColumn >= 1.8 || bNum <= 180; // tergolong kolom pipih jika h/b tinggi atau b tipis
+
+  const L_u = Math.max(500, parseFloat(columnHeightLu as string) || 3000);
+  const r_y = 0.2887 * bNum; // radius girasi arah sumbu lemah y
+  const lambda_y = (kFactor * L_u) / r_y; // rasio kelangsingan arah sumbu lemah y
+  const isSlenderY = lambda_y > 22; // batas kelangsingan SNI 2847 untuk kolom unbraced
+
+  // Hubungan elastisitas & kekakuan retak efektif (Euler Buckling)
+  const I_y = (hNum * Math.pow(bNum, 3)) / 12; // Momen Inersia Gross Sumbu Lemah (mm4)
+  const E_c = 4700 * Math.sqrt(fcNum); // Modulus Elastisitas Beton (MPa)
+  const EI_eff = 0.25 * E_c * I_y; // Kekakuan efektif penampang retak kolom langsing
+  const Pcr_kN = (Math.PI * Math.PI * EI_eff) / Math.pow(kFactor * L_u, 2) * 1e-3; // Beban Tekuk Kritis Euler (kN)
+  const bucklingLoadRatio = Pcr_kN > 0 ? (PuNum / Pcr_kN) : 0;
+
+  // Spasi maksimum sengkang pengekang (stirrup spacing) untuk stabilitas tekuk lateral tulangan utama
+  const minMainBarDia = Math.min(rebarDiameterX, rebarDiameterY);
+  const maxStirrupSpacing = Math.round(Math.min(16 * minMainBarDia, 48 * stirrupDiameterColumn, bNum));
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-fade-in">
       
@@ -286,46 +306,98 @@ export default function ColumnCalculator() {
           </div>
         </div>
 
-        {/* Rebars Arrangement Table/Template */}
+        {/* Rebars Arrangement Table/Template with X and Y Selection */}
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg">
-          <h3 className="text-sm font-semibold text-slate-200 mb-4 uppercase tracking-wider flex items-center gap-2">
+          <h3 className="text-sm font-semibold text-slate-200 mb-1.5 uppercase tracking-wider flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-indigo-500"></span>
-            2. Susunan Rebar Utama Kolom
+            2. Susunan Rebar Kolom (Sisi X & Y)
           </h3>
+          <p className="text-[11px] text-slate-400 mb-4">
+            Konfigurasi jumlah batang dan diameter tulangan secara mandiri untuk Sumbu X (lebar b) dan Sumbu Y (depth h).
+          </p>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1.5">
-                Diameter Rebar Utama
-              </label>
-              <select
-                value={rebarDiameter}
-                onChange={(e) => setRebarDiameter(parseInt(e.target.value))}
-                className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg px-3 py-1.5 text-sm text-slate-200 font-mono transition outline-none cursor-pointer"
-              >
-                {STANDARD_BAR_DIAMETERS.map(d => (
-                  <option key={d} value={d}>D{d}</option>
-                ))}
-              </select>
+          <div className="space-y-4">
+            {/* TULANGAN SISI X */}
+            <div className="p-3 bg-slate-950/40 rounded-lg border border-slate-850">
+              <span className="text-[11px] font-bold text-indigo-400 block mb-2 uppercase tracking-wide">
+                Sisi Arah X (nx pada Lebar b)
+              </span>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] text-slate-400 mb-1">
+                    Diameter Besi (X)
+                  </label>
+                  <select
+                    value={rebarDiameterX}
+                    onChange={(e) => setRebarDiameterX(parseInt(e.target.value))}
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded px-2.5 py-1.5 text-xs text-slate-200 font-mono outline-none cursor-pointer"
+                  >
+                    {STANDARD_BAR_DIAMETERS.map(d => (
+                      <option key={d} value={d}>D{d}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] text-slate-400 mb-1">
+                    Jumlah Baris nx (Min 2)
+                  </label>
+                  <select
+                    value={rebarCountX}
+                    onChange={(e) => setRebarCountX(parseInt(e.target.value))}
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded px-2.5 py-1.5 text-xs text-slate-200 font-mono outline-none cursor-pointer"
+                  >
+                    {[2, 3, 4, 5, 6, 7, 8, 9, 10].map(c => (
+                      <option key={c} value={c}>{c} Batang</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-400 mb-1.5">
-                Total Jumlah Batang (n)
-              </label>
-              <select
-                value={totalBarsCount}
-                onChange={(e) => setTotalBarsCount(parseInt(e.target.value))}
-                className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono transition outline-none cursor-pointer"
-              >
-                {[4, 6, 8, 10, 12, 14, 16].map(c => (
-                  <option key={c} value={c}>{c} Batang (Simetris)</option>
-                ))}
-              </select>
+
+            {/* TULANGAN SISI Y */}
+            <div className="p-3 bg-slate-950/40 rounded-lg border border-slate-850">
+              <span className="text-[11px] font-bold text-teal-400 block mb-2 uppercase tracking-wide">
+                Sisi Arah Y (ny pada Kedalaman h)
+              </span>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] text-slate-400 mb-1">
+                    Diameter Besi (Y)
+                  </label>
+                  <select
+                    value={rebarDiameterY}
+                    onChange={(e) => setRebarDiameterY(parseInt(e.target.value))}
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded px-2.5 py-1.5 text-xs text-slate-200 font-mono outline-none cursor-pointer"
+                  >
+                    {STANDARD_BAR_DIAMETERS.map(d => (
+                      <option key={d} value={d}>D{d}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] text-slate-400 mb-1">
+                    Jumlah Baris ny (Min 2)
+                  </label>
+                  <select
+                    value={rebarCountY}
+                    onChange={(e) => setRebarCountY(parseInt(e.target.value))}
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded px-2.5 py-1.5 text-xs text-slate-200 font-mono outline-none cursor-pointer"
+                  >
+                    {[2, 3, 4, 5, 6, 7, 8, 9, 10].map(c => (
+                      <option key={c} value={c}>{c} Batang</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </div>
           </div>
 
           <div className="mt-4 p-3 bg-slate-950/60 rounded-lg border border-slate-850 space-y-1.5">
-            <span className="text-[10px] font-bold text-slate-400 block uppercase">Profil Distribusi Simetris (SNI 1% - 8%):</span>
+            <span className="text-[10px] font-bold text-slate-400 block uppercase">Profil Distribusi Gabungan (SNI 1% - 8%):</span>
+            <div className="flex justify-between text-xs text-slate-300">
+              <span>Total Jumlah Besi (n_total):</span>
+              <span className="font-mono font-bold text-indigo-300">{2 * rebarCountX + 2 * (rebarCountY - 2)} Batang</span>
+            </div>
             <div className="flex justify-between text-xs text-slate-300">
               <span>Total Luas Baja (Ast):</span>
               <span className="font-mono font-bold text-slate-100">{Math.round(result.Ast)} mm²</span>
@@ -383,6 +455,141 @@ export default function ColumnCalculator() {
                 <span className="absolute right-3 top-2.5 text-xs text-slate-550 select-none">kNm</span>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Part 4: Analisis Kelangsingan & Kolom Pipih */}
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg space-y-4">
+          <h3 className="text-xs font-semibold text-slate-200 mb-1 uppercase tracking-wider flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse"></span>
+            4. Kelangsingan & Kolom Pipih
+          </h3>
+          <p className="text-[11px] text-slate-400">
+            Perhitungan kelangsingan arah sumbu lemah y (lebar b) dan risiko buckling di bawah peraturan SNI 2847.
+          </p>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[10px] font-semibold text-slate-400 mb-1">
+                Tinggi Kolom Bebas Lu (mm)
+              </label>
+              <input
+                type="number"
+                step="any"
+                value={columnHeightLu}
+                onChange={(e) => setColumnHeightLu(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 rounded px-2.5 py-1.5 text-xs text-slate-200 font-mono outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-semibold text-slate-400 mb-1">
+                Faktor Panjang Tekuk k
+              </label>
+              <select
+                value={kFactor}
+                onChange={(e) => setKFactor(parseFloat(e.target.value))}
+                className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 rounded px-2.5 py-1.5 text-xs text-slate-200 font-mono outline-none cursor-pointer"
+              >
+                <option value={1.0}>1.0 (Sendi - Sendi)</option>
+                <option value={0.7}>0.7 (Sendi - Jepit)</option>
+                <option value={0.5}>0.5 (Jepit - Jepit)</option>
+                <option value={2.0}>2.0 (Jepit - Bebas)</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[10px] font-semibold text-slate-400 mb-1">
+                Zona Seismik (KDS)
+              </label>
+              <select
+                value={seismicKds}
+                onChange={(e) => setSeismicKds(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 rounded px-2.5 py-1.5 text-xs text-slate-200 font-mono outline-none cursor-pointer"
+              >
+                <option value="KDS_A_B">KDS A-B (Seismik Rendah)</option>
+                <option value="KDS_C">KDS C (Seismik Sedang)</option>
+                <option value="KDS_D_F">KDS D-F (Seismik Tinggi / SRPMK)</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-semibold text-slate-400 mb-1">
+                Dia. Sengkang Stirrup (mm)
+              </label>
+              <select
+                value={stirrupDiameterColumn}
+                onChange={(e) => setStirrupDiameterColumn(parseInt(e.target.value))}
+                className="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 rounded px-2.5 py-1.5 text-xs text-slate-200 font-mono outline-none cursor-pointer"
+              >
+                {[8, 10, 12, 13, 16].map(d => (
+                  <option key={d} value={d}>Ø{d}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* HASIL DETEKSI DAN REKOMENDASI LIVE */}
+          <div className="space-y-2.5 p-3 bg-slate-950/60 rounded-lg border border-slate-850">
+            {/* Kategori Kolom */}
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-slate-400">Rasio Aspek Penampang h/b:</span>
+              {isFlatColumn ? (
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-300 border border-amber-500/20">
+                  Kolom Pipih ({aspectColumn.toFixed(2)})
+                </span>
+              ) : (
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700">
+                  Kolom Standard ({aspectColumn.toFixed(2)})
+                </span>
+              )}
+            </div>
+
+            {/* Kelangsingan */}
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-slate-400">Rasio Kelangsingan (λ_y):</span>
+              <span className="font-mono font-bold text-slate-350">{lambda_y.toFixed(1)}</span>
+            </div>
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-slate-400">Batas Kelangsingan SNI:</span>
+              {isSlenderY ? (
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/10 text-rose-300 border border-rose-500/20">
+                  LANGSING (λ &gt; 22)
+                </span>
+              ) : (
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
+                  PENDEK (λ ≤ 22)
+                </span>
+              )}
+            </div>
+
+            {/* Buckling Euler */}
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-slate-400">Beban Tekuk Kritis (P_cr):</span>
+              <span className="font-mono font-bold text-slate-200">{Math.round(Pcr_kN)} kN</span>
+            </div>
+            {bucklingLoadRatio > 0.75 && (
+              <div className="flex items-start gap-1 p-2 rounded bg-rose-500/10 border border-rose-500/20 text-[10px] text-rose-300">
+                <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" />
+                <span>Bahaya Tekuk: Beban kerja aksial Pu mendekati atau melebihi kapasitas kritis!</span>
+              </div>
+            )}
+
+            {/* Spasi Sengkang Maksimum */}
+            <div className="flex justify-between items-center text-xs pt-2 border-t border-slate-850">
+              <span className="text-slate-400">Spasi Sengkang Stabilizer:</span>
+              <span className="font-mono font-bold text-emerald-400">s_max ≤ {maxStirrupSpacing} mm</span>
+            </div>
+
+            {/* Cek Seismik SRPMK */}
+            {seismicKds === "KDS_D_F" && (bNum < 300 || bNum / hNum < 0.4) && (
+              <div className="text-[10px] text-amber-300 bg-amber-500/10 border border-amber-500/20 p-2 rounded mt-1 space-y-1">
+                <div className="font-bold">Informasi SRPMK (KDS D-F / Seismik Tinggi):</div>
+                <div className="text-slate-400 leading-relaxed">
+                  Dimensi kolom ({bNum}x{hNum} mm) atau rasionya tidak memenuhi syarat minimum SRPMK (&ge; 300 mm, b/h &ge; 0.4) untuk portal penahan beban lateral utama. Direkomendasikan sebagai kolom praktis.
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -623,7 +830,7 @@ export default function ColumnCalculator() {
 
           <div className="flex flex-col sm:flex-row gap-6 p-4 border border-slate-800 border-dashed rounded-xl bg-slate-950/20 items-center justify-around">
             
-            {/* SVG Cross-section drawing */}
+            {/* SVG Cross-section drawing (Fully dynamic) */}
             <svg 
               width="150" 
               height="150" 
@@ -631,60 +838,109 @@ export default function ColumnCalculator() {
               className="overflow-visible"
             >
               {/* concrete block */}
-              <rect x="0" y="0" width="100" height="100" rx="4" className="fill-slate-850 stroke-slate-700" strokeWidth="2.5" />
+              <rect x="0" y="0" width="100" height="100" rx="4" className="fill-slate-850 {parseFloat(b as string) < parseFloat(h as string) * 0.5 ? 'stroke-rose-500' : 'stroke-slate-700'}" strokeWidth="2.5" />
               <text x="50" y="-4" textAnchor="middle" className="text-[8px] font-mono fill-slate-400 font-bold">b = {b} mm</text>
               <text x="-4" y="50" textAnchor="middle" transform="rotate(-90 -4 50)" className="text-[8px] font-mono fill-slate-400 font-bold">h = {h} mm</text>
 
               {/* tie stirrup (sengkang pengikat) */}
-              <rect x="12" y="12" width="76" height="76" rx="2" className="fill-none stroke-indigo-400/60" strokeWidth="1.5" />
+              <rect x="12" y="12" width="76" height="76" rx="2" className="fill-none stroke-indigo-400/50" strokeWidth="1.2" />
 
-              {/* draw corner rebar cores depending on selections */}
-              {/* Corners by default */}
-              <circle cx="16" cy="16" r="4.5" className="fill-emerald-400 stroke-white" strokeWidth="0.8" />
-              <circle cx="84" cy="16" r="4.5" className="fill-emerald-400 stroke-white" strokeWidth="0.8" />
-              <circle cx="16" cy="84" r="4.5" className="fill-emerald-400 stroke-white" strokeWidth="0.8" />
-              <circle cx="84" cy="84" r="4.5" className="fill-emerald-400 stroke-white" strokeWidth="0.8" />
+              {/* Dynamic Rebars */}
+              {(() => {
+                const arr: React.ReactNode[] = [];
+                const totalBars = 2 * rebarCountX + 2 * (rebarCountY - 2);
 
-              {/* Side bars */}
-              {totalBarsCount >= 6 && (
-                <>
-                  <circle cx="16" cy="50" r="4.5" className="fill-emerald-400 stroke-white" strokeWidth="0.8" />
-                  <circle cx="84" cy="50" r="4.5" className="fill-emerald-400 stroke-white" strokeWidth="0.8" />
-                </>
-              )}
+                // 1. Top row of rebarCountX bars at y = 16
+                for (let i = 0; i < rebarCountX; i++) {
+                  const cx = rebarCountX > 1 ? 16 + (i / (rebarCountX - 1)) * 68 : 50;
+                  const radiusX = 2.5 + rebarDiameterX / 8;
+                  arr.push(
+                    <circle 
+                      key={`top-${i}`} 
+                      cx={cx} 
+                      cy={16} 
+                      r={radiusX} 
+                      className="fill-indigo-400 stroke-white" 
+                      strokeWidth="0.8" 
+                    />
+                  );
+                }
 
-              {totalBarsCount >= 8 && (
-                <>
-                  <circle cx="50" cy="16" r="4.5" className="fill-emerald-400 stroke-white" strokeWidth="0.8" />
-                  <circle cx="50" cy="84" r="4.5" className="fill-emerald-400 stroke-white" strokeWidth="0.8" />
-                </>
-              )}
+                // 2. Bottom row of rebarCountX bars at y = 84
+                for (let i = 0; i < rebarCountX; i++) {
+                  const cx = rebarCountX > 1 ? 16 + (i / (rebarCountX - 1)) * 68 : 50;
+                  const radiusX = 2.5 + rebarDiameterX / 8;
+                  arr.push(
+                    <circle 
+                      key={`bottom-${i}`} 
+                      cx={cx} 
+                      cy={84} 
+                      r={radiusX} 
+                      className="fill-indigo-400 stroke-white" 
+                      strokeWidth="0.8" 
+                    />
+                  );
+                }
 
-              {totalBarsCount >= 10 && (
-                <>
-                  <circle cx="16" cy="33" r="4.5" className="fill-emerald-400 stroke-white" strokeWidth="0.8" />
-                  <circle cx="16" cy="67" r="4.5" className="fill-emerald-400 stroke-white" strokeWidth="0.8" />
-                  <circle cx="84" cy="33" r="4.5" className="fill-emerald-400 stroke-white" strokeWidth="0.8" />
-                  <circle cx="84" cy="67" r="4.5" className="fill-emerald-400 stroke-white" strokeWidth="0.8" />
-                </>
-              )}
+                // 3. Intermediate left & right side bars at intermediate ys
+                if (rebarCountY > 2) {
+                  for (let j = 1; j < rebarCountY - 1; j++) {
+                    const cy = 16 + (j / (rebarCountY - 1)) * 68;
+                    const radiusY = 2.5 + rebarDiameterY / 8;
+                    // left side
+                    arr.push(
+                      <circle 
+                        key={`left-${j}`} 
+                        cx={16} 
+                        cy={cy} 
+                        r={radiusY} 
+                        className="fill-teal-400 stroke-white" 
+                        strokeWidth="0.8" 
+                      />
+                    );
+                    // right side
+                    arr.push(
+                      <circle 
+                        key={`right-${j}`} 
+                        cx={84} 
+                        cy={cy} 
+                        r={radiusY} 
+                        className="fill-teal-400 stroke-white" 
+                        strokeWidth="0.8" 
+                      />
+                    );
+                  }
+                }
+
+                return arr;
+              })()}
             </svg>
 
             <div className="flex-1 text-xs space-y-2 text-slate-350 select-text max-w-xs">
               <div className="flex justify-between border-b border-slate-800/60 pb-1">
-                <span>Rincian Tulangan:</span>
-                <span className="font-mono text-slate-100 font-bold">{totalBarsCount} Batang D{rebarDiameter}</span>
+                <span>Tulangan Arah X:</span>
+                <span className="font-mono text-indigo-300 font-bold">{rebarCountX} Batang D{rebarDiameterX}</span>
+              </div>
+              <div className="flex justify-between border-b border-slate-800/60 pb-1">
+                <span>Tulangan Arah Y:</span>
+                <span className="font-mono text-teal-400 font-bold">{rebarCountY} Rows x 2 D{rebarDiameterY}</span>
+              </div>
+              <div className="flex justify-between border-b border-slate-800/60 pb-1">
+                <span>Total Besi:</span>
+                <span className="font-mono text-slate-100 font-bold">
+                  {2 * rebarCountX + 2 * (rebarCountY - 2)} Batang
+                </span>
               </div>
               <div className="flex justify-between border-b border-slate-800/60 pb-1">
                 <span>Total Luas Baja (Ast):</span>
                 <span className="font-mono text-slate-100">{Math.round(result.Ast)} mm²</span>
               </div>
               <div className="flex justify-between border-b border-slate-800/60 pb-1">
-                <span>Gaya Aksial Kerja Ultimate:</span>
+                <span>Beban Aksial Pu:</span>
                 <span className="font-mono text-indigo-400">{Pu} kN</span>
               </div>
               <div className="flex justify-between border-b border-slate-800/60 pb-1">
-                <span>Momen Kerja Ultimate:</span>
+                <span>Momen Lentur Mu:</span>
                 <span className="font-mono text-indigo-400">{Mu} kNm</span>
               </div>
             </div>
