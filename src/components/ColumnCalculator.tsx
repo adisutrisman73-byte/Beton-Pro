@@ -830,91 +830,172 @@ export default function ColumnCalculator() {
 
           <div className="flex flex-col sm:flex-row gap-6 p-4 border border-slate-800 border-dashed rounded-xl bg-slate-950/20 items-center justify-around">
             
-            {/* SVG Cross-section drawing (Fully dynamic) */}
-            <svg 
-              width="150" 
-              height="150" 
-              viewBox="-10 -10 120 120"
-              className="overflow-visible"
-            >
-              {/* concrete block */}
-              <rect x="0" y="0" width="100" height="100" rx="4" className="fill-slate-850 {parseFloat(b as string) < parseFloat(h as string) * 0.5 ? 'stroke-rose-500' : 'stroke-slate-700'}" strokeWidth="2.5" />
-              <text x="50" y="-4" textAnchor="middle" className="text-[8px] font-mono fill-slate-400 font-bold">b = {b} mm</text>
-              <text x="-4" y="50" textAnchor="middle" transform="rotate(-90 -4 50)" className="text-[8px] font-mono fill-slate-400 font-bold">h = {h} mm</text>
+            {/* SVG Cross-section drawing (Fully dynamic, proportionally accurate) */}
+            {(() => {
+              const bNum = Math.max(100, parseFloat(b as string) || 300);
+              const hNum = Math.max(100, parseFloat(h as string) || 500);
+              const coverNum = Math.max(10, parseFloat(cover as string) || 40);
+              const maxVal = Math.max(bNum, hNum);
+              const margin = maxVal * 0.18; // generous margin for dimension lines & tags
+              
+              // Spacing helper for stirrup
+              const stirrupX = coverNum + stirrupDiameterColumn / 2;
+              const stirrupY = coverNum + stirrupDiameterColumn / 2;
+              const stirrupW = bNum - 2 * coverNum - stirrupDiameterColumn;
+              const stirrupH = hNum - 2 * coverNum - stirrupDiameterColumn;
 
-              {/* tie stirrup (sengkang pengikat) */}
-              <rect x="12" y="12" width="76" height="76" rx="2" className="fill-none stroke-indigo-400/50" strokeWidth="1.2" />
+              // Spacing helper for rebar centers
+              const startX = coverNum + stirrupDiameterColumn + rebarDiameterX / 2;
+              const endX = bNum - (coverNum + stirrupDiameterColumn + rebarDiameterX / 2);
 
-              {/* Dynamic Rebars */}
-              {(() => {
-                const arr: React.ReactNode[] = [];
-                const totalBars = 2 * rebarCountX + 2 * (rebarCountY - 2);
+              return (
+                <svg 
+                  viewBox={`${-margin} ${-margin} ${bNum + 2 * margin} ${hNum + 2 * margin}`}
+                  className="w-48 h-auto max-h-[190px] overflow-visible"
+                >
+                  {/* Concrete block */}
+                  <rect 
+                    x="0" 
+                    y="0" 
+                    width={bNum} 
+                    height={hNum} 
+                    rx={Math.min(bNum, hNum) * 0.04} 
+                    className={`fill-slate-850 ${bNum < hNum * 0.5 ? 'stroke-rose-500' : 'stroke-slate-700'}`} 
+                    strokeWidth={Math.max(2.5, maxVal * 0.015)} 
+                  />
 
-                // 1. Top row of rebarCountX bars at y = 16
-                for (let i = 0; i < rebarCountX; i++) {
-                  const cx = rebarCountX > 1 ? 16 + (i / (rebarCountX - 1)) * 68 : 50;
-                  const radiusX = 2.5 + rebarDiameterX / 8;
-                  arr.push(
-                    <circle 
-                      key={`top-${i}`} 
-                      cx={cx} 
-                      cy={16} 
-                      r={radiusX} 
-                      className="fill-indigo-400 stroke-white" 
-                      strokeWidth="0.8" 
+                  {/* Tie stirrup (sengkang pengikat) */}
+                  {stirrupW > 0 && stirrupH > 0 && (
+                    <rect 
+                      x={stirrupX} 
+                      y={stirrupY} 
+                      width={stirrupW} 
+                      height={stirrupH} 
+                      rx={Math.max(2, stirrupDiameterColumn * 0.3)} 
+                      className="fill-none stroke-indigo-400/60" 
+                      strokeWidth={stirrupDiameterColumn} 
                     />
-                  );
-                }
+                  )}
 
-                // 2. Bottom row of rebarCountX bars at y = 84
-                for (let i = 0; i < rebarCountX; i++) {
-                  const cx = rebarCountX > 1 ? 16 + (i / (rebarCountX - 1)) * 68 : 50;
-                  const radiusX = 2.5 + rebarDiameterX / 8;
-                  arr.push(
-                    <circle 
-                      key={`bottom-${i}`} 
-                      cx={cx} 
-                      cy={84} 
-                      r={radiusX} 
-                      className="fill-indigo-400 stroke-white" 
-                      strokeWidth="0.8" 
-                    />
-                  );
-                }
+                  {/* Measurement labels & Dimension helper lines */}
+                  {/* Label b */}
+                  <line 
+                    x1={0} 
+                    y1={-margin * 0.25} 
+                    x2={bNum} 
+                    y2={-margin * 0.25} 
+                    className="stroke-slate-600" 
+                    strokeWidth={Math.max(1, maxVal * 0.003)} 
+                  />
+                  <line x1={0} y1={-margin * 0.35} x2={0} y2={margin * 0.05} className="stroke-slate-700" strokeWidth="1" />
+                  <line x1={bNum} y1={-margin * 0.35} x2={bNum} y2={margin * 0.05} className="stroke-slate-700" strokeWidth="1" />
+                  <text 
+                    x={bNum / 2} 
+                    y={-margin * 0.45} 
+                    textAnchor="middle" 
+                    className="fill-slate-350 font-mono font-bold font-sans"
+                    fontSize={Math.max(10, maxVal * 0.06)}
+                  >
+                    b = {b} mm
+                  </text>
 
-                // 3. Intermediate left & right side bars at intermediate ys
-                if (rebarCountY > 2) {
-                  for (let j = 1; j < rebarCountY - 1; j++) {
-                    const cy = 16 + (j / (rebarCountY - 1)) * 68;
-                    const radiusY = 2.5 + rebarDiameterY / 8;
-                    // left side
-                    arr.push(
-                      <circle 
-                        key={`left-${j}`} 
-                        cx={16} 
-                        cy={cy} 
-                        r={radiusY} 
-                        className="fill-teal-400 stroke-white" 
-                        strokeWidth="0.8" 
-                      />
-                    );
-                    // right side
-                    arr.push(
-                      <circle 
-                        key={`right-${j}`} 
-                        cx={84} 
-                        cy={cy} 
-                        r={radiusY} 
-                        className="fill-teal-400 stroke-white" 
-                        strokeWidth="0.8" 
-                      />
-                    );
-                  }
-                }
+                  {/* Label h */}
+                  <line 
+                    x1={-margin * 0.25} 
+                    y1={0} 
+                    x2={-margin * 0.25} 
+                    y2={hNum} 
+                    className="stroke-slate-600" 
+                    strokeWidth={Math.max(1, maxVal * 0.003)} 
+                  />
+                  <line x1={-margin * 0.35} y1={0} x2={margin * 0.05} y2={0} className="stroke-slate-700" strokeWidth="1" />
+                  <line x1={-margin * 0.35} y1={hNum} x2={margin * 0.05} y2={hNum} className="stroke-slate-700" strokeWidth="1" />
+                  <text 
+                    x={-margin * 0.45} 
+                    y={hNum / 2} 
+                    textAnchor="middle" 
+                    transform={`rotate(-90 ${-margin * 0.45} ${hNum / 2})`} 
+                    className="fill-slate-350 font-mono font-bold font-sans"
+                    fontSize={Math.max(10, maxVal * 0.06)}
+                  >
+                    h = {h} mm
+                  </text>
 
-                return arr;
-              })()}
-            </svg>
+                  {/* Dynamic Rebars drawn in perfectly scaled diameters */}
+                  {(() => {
+                    const bars: React.ReactNode[] = [];
+
+                    // 1. Top row of rebarCountX bars (Diameter: rebarDiameterX)
+                    const topY = coverNum + stirrupDiameterColumn + rebarDiameterX / 2;
+                    for (let i = 0; i < rebarCountX; i++) {
+                      const cx = rebarCountX > 1 ? startX + (i / (rebarCountX - 1)) * (endX - startX) : bNum / 2;
+                      const radiusX = rebarDiameterX / 2;
+                      bars.push(
+                        <circle 
+                          key={`top-${i}`} 
+                          cx={cx} 
+                          cy={topY} 
+                          r={radiusX} 
+                          className="fill-indigo-400 stroke-white" 
+                          strokeWidth={Math.max(0.6, radiusX * 0.1)} 
+                        />
+                      );
+                    }
+
+                    // 2. Bottom row of rebarCountX bars (Diameter: rebarDiameterX)
+                    const bottomY = hNum - (coverNum + stirrupDiameterColumn + rebarDiameterX / 2);
+                    for (let i = 0; i < rebarCountX; i++) {
+                      const cx = rebarCountX > 1 ? startX + (i / (rebarCountX - 1)) * (endX - startX) : bNum / 2;
+                      const radiusX = rebarDiameterX / 2;
+                      bars.push(
+                        <circle 
+                          key={`bottom-${i}`} 
+                          cx={cx} 
+                          cy={bottomY} 
+                          r={radiusX} 
+                          className="fill-indigo-400 stroke-white" 
+                          strokeWidth={Math.max(0.6, radiusX * 0.1)} 
+                        />
+                      );
+                    }
+
+                    // 3. Intermediate left & right side bars (Diameter: rebarDiameterY)
+                    if (rebarCountY > 2) {
+                      const sideStartX = coverNum + stirrupDiameterColumn + rebarDiameterY / 2;
+                      const sideEndX = bNum - (coverNum + stirrupDiameterColumn + rebarDiameterY / 2);
+                      for (let j = 1; j < rebarCountY - 1; j++) {
+                        const cy = coverNum + (j / (rebarCountY - 1)) * (hNum - 2 * coverNum);
+                        const radiusY = rebarDiameterY / 2;
+                        // Left side bar
+                        bars.push(
+                          <circle 
+                            key={`left-${j}`} 
+                            cx={sideStartX} 
+                            cy={cy} 
+                            r={radiusY} 
+                            className="fill-teal-400 stroke-white" 
+                            strokeWidth={Math.max(0.6, radiusY * 0.1)} 
+                          />
+                        );
+                        // Right side bar
+                        bars.push(
+                          <circle 
+                            key={`right-${j}`} 
+                            cx={sideEndX} 
+                            cy={cy} 
+                            r={radiusY} 
+                            className="fill-teal-400 stroke-white" 
+                            strokeWidth={Math.max(0.6, radiusY * 0.1)} 
+                          />
+                        );
+                      }
+                    }
+
+                    return bars;
+                  })()}
+                </svg>
+              );
+            })()}
 
             <div className="flex-1 text-xs space-y-2 text-slate-350 select-text max-w-xs">
               <div className="flex justify-between border-b border-slate-800/60 pb-1">

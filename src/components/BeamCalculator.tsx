@@ -603,139 +603,228 @@ export default function BeamCalculator() {
 
             <div className="flex flex-col md:flex-row justify-center items-center gap-6 py-4 border border-slate-800 border-dashed rounded-lg bg-slate-950/40">
               
-              {/* CROSS SECTION SVG */}
-              <svg 
-                width="160" 
-                height="220" 
-                viewBox="-20 -20 220 280" 
-                className="overflow-visible"
-              >
-                {/* Outer concrete rectangle */}
-                <rect 
-                  x="0" 
-                  y="0" 
-                  width="180" 
-                  height="240" 
-                  rx="6"
-                  className="fill-slate-850 stroke-slate-700" 
-                  strokeWidth="3.2"
-                />
-                
-                {/* Dimensions Labels */}
-                <text x="90" y="-10" textAnchor="middle" className="text-[11px] font-mono fill-slate-400">b = {b} mm</text>
-                <text x="-12" y="120" textAnchor="middle" transform="rotate(-90 -12 120)" className="text-[11px] font-mono fill-slate-400">h = {h} mm</text>
+              {/* DYNAMIC CROSS SECTION VISUALIZER */}
+              {(() => {
+                const bNum = Math.max(100, parseFloat(b as string) || 300);
+                const hNum = Math.max(100, parseFloat(h as string) || 500);
+                const coverNum = Math.max(10, parseFloat(cover as string) || 40);
+                const rebarCountNum = Math.max(1, parseFloat(activeRebarCount as string) || 2);
+                const compRebarCountNum = Math.max(0, parseFloat(activeCompRebarCount as string) || 0);
 
-                {/* Cover box representing Stirrup (Sengkang) */}
-                <rect 
-                  x="15" 
-                  y="15" 
-                  width="150" 
-                  height="210" 
-                  rx="3"
-                  className="fill-none stroke-blue-500/80" 
-                  strokeWidth="2.2"
-                />
-                
-                {/* Stirrup Label */}
-                <text x="90" y="28" textAnchor="middle" className="text-[8px] font-mono fill-blue-300 uppercase">
-                  Sengkang Ø{isActiveTumpuan ? stirrupDiameterTumpuan : stirrupDiameterLapangan}
-                </text>
+                const maxVal = Math.max(bNum, hNum);
+                const margin = maxVal * 0.22; // premium spacing margin
 
-                {/* Top Rebars: Tension Rebars in Tumpuan (Support) OR Compression/holding bars in Lapangan */}
-                {isActiveTumpuan ? (
-                  // Support has Tension Rebars on Top (Tension side because of negative moments!)
-                  Array.from({ length: Math.min(8, rebarCountTumpuan) }).map((_, i) => {
-                    const rowSize = rebarCountTumpuan <= 5 ? rebarCountTumpuan : Math.ceil(rebarCountTumpuan / 2);
-                    const isSecondRow = i >= rowSize;
-                    const indexInRow = isSecondRow ? i - rowSize : i;
-                    const itemsInCurrRow = isSecondRow ? rebarCountTumpuan - rowSize : rowSize;
-                    const xCoord = itemsInCurrRow === 1 ? 90 : 15 + 15 + (indexInRow * (150 - 30)) / (itemsInCurrRow - 1);
-                    const yCoord = isSecondRow ? 30 + 17 : 30;
-                    return (
-                      <circle 
-                        key={`top-tens-${i}`}
-                        cx={xCoord} 
-                        cy={yCoord} 
-                        r={Math.min(9, 3.5 + rebarDiameterTumpuan / 4)} 
-                        className="fill-emerald-400 stroke-emerald-100" 
-                        strokeWidth="1"
+                // Spacing helpers for stirrup
+                const stirrupX = coverNum + activeStirrupDiameter / 2;
+                const stirrupY = coverNum + activeStirrupDiameter / 2;
+                const stirrupW = bNum - 2 * coverNum - activeStirrupDiameter;
+                const stirrupH = hNum - 2 * coverNum - activeStirrupDiameter;
+
+                // Center coordinates for steel rebars:
+                // Sisi Atas (Top)
+                const startTopX = coverNum + activeStirrupDiameter + (isActiveTumpuan ? activeRebarDiameter : activeCompRebarDiameter) / 2;
+                const endTopX = bNum - (coverNum + activeStirrupDiameter + (isActiveTumpuan ? activeRebarDiameter : activeCompRebarDiameter) / 2);
+                const topY = coverNum + activeStirrupDiameter + (isActiveTumpuan ? activeRebarDiameter : activeCompRebarDiameter) / 2;
+
+                // Sisi Bawah (Bottom)
+                const startBotX = coverNum + activeStirrupDiameter + (!isActiveTumpuan ? activeRebarDiameter : activeCompRebarDiameter) / 2;
+                const endBotX = bNum - (coverNum + activeStirrupDiameter + (!isActiveTumpuan ? activeRebarDiameter : activeCompRebarDiameter) / 2);
+                const bottomY = hNum - (coverNum + activeStirrupDiameter + (!isActiveTumpuan ? activeRebarDiameter : activeCompRebarDiameter) / 2);
+
+                return (
+                  <svg 
+                    viewBox={`${-margin} ${-margin} ${bNum + 2 * margin} ${hNum + 2.4 * margin}`}
+                    className="w-48 h-auto max-h-[220px] overflow-visible"
+                    id="beam-cross-section-svg"
+                  >
+                    {/* Outer concrete rectangle */}
+                    <rect 
+                      x="0" 
+                      y="0" 
+                      width={bNum} 
+                      height={hNum} 
+                      rx={Math.min(bNum, hNum) * 0.04}
+                      className="fill-slate-850 stroke-slate-700" 
+                      strokeWidth={Math.max(2.5, maxVal * 0.015)}
+                    />
+                    
+                    {/* Dimensions Labels */}
+                    {/* Label b */}
+                    <line 
+                      x1={0} 
+                      y1={-margin * 0.25} 
+                      x2={bNum} 
+                      y2={-margin * 0.25} 
+                      className="stroke-slate-600" 
+                      strokeWidth={Math.max(1, maxVal * 0.003)} 
+                    />
+                    <line x1={0} y1={-margin * 0.35} x2={0} y2={margin * 0.05} className="stroke-slate-700" strokeWidth="1" />
+                    <line x1={bNum} y1={-margin * 0.35} x2={bNum} y2={margin * 0.05} className="stroke-slate-700" strokeWidth="1" />
+                    <text 
+                      x={bNum / 2} 
+                      y={-margin * 0.45} 
+                      textAnchor="middle" 
+                      className="fill-slate-350 font-mono font-bold font-sans"
+                      fontSize={Math.max(10, maxVal * 0.06)}
+                    >
+                      b = {b} mm
+                    </text>
+
+                    {/* Label h */}
+                    <line 
+                      x1={-margin * 0.25} 
+                      y1={0} 
+                      x2={-margin * 0.25} 
+                      y2={hNum} 
+                      className="stroke-slate-600" 
+                      strokeWidth={Math.max(1, maxVal * 0.003)} 
+                    />
+                    <line x1={-margin * 0.35} y1={0} x2={margin * 0.05} y2={0} className="stroke-slate-700" strokeWidth="1" />
+                    <line x1={-margin * 0.35} y1={hNum} x2={margin * 0.05} y2={hNum} className="stroke-slate-700" strokeWidth="1" />
+                    <text 
+                      x={-margin * 0.45} 
+                      y={hNum / 2} 
+                      textAnchor="middle" 
+                      transform={`rotate(-90 ${-margin * 0.45} ${hNum / 2})`} 
+                      className="fill-slate-350 font-mono font-bold font-sans"
+                      fontSize={Math.max(10, maxVal * 0.06)}
+                    >
+                      h = {h} mm
+                    </text>
+
+                    {/* Cover box representing Stirrup (Sengkang) */}
+                    {stirrupW > 0 && stirrupH > 0 && (
+                      <rect 
+                        x={stirrupX} 
+                        y={stirrupY} 
+                        width={stirrupW} 
+                        height={stirrupH} 
+                        rx={Math.max(2, activeStirrupDiameter * 0.3)} 
+                        className="fill-none stroke-blue-500/80" 
+                        strokeWidth={Math.max(1.5, activeStirrupDiameter / 4)}
                       />
-                    );
-                  })
-                ) : (
-                  // Lapangan has holding or compression bars on Top
-                  activeIsDouble ? (
-                    Array.from({ length: Math.min(6, compRebarCountLapangan) }).map((_, i) => {
-                      const xCoord = compRebarCountLapangan === 1 ? 90 : 15 + 15 + (i * (150 - 30)) / (compRebarCountLapangan - 1);
-                      return (
-                        <circle 
-                          key={`top-comp-${i}`}
-                          cx={xCoord} 
-                          cy="30" 
-                          r={Math.min(9, 3 + compRebarDiameterLapangan / 4)} 
-                          className="fill-cyan-500 stroke-cyan-100" 
-                          strokeWidth="1"
-                        />
-                      );
-                    })
-                  ) : (
-                    <>
-                      <circle cx="30" cy="30" r="4" className="fill-slate-600" />
-                      <circle cx="150" cy="30" r="4" className="fill-slate-600" />
-                    </>
-                  )
-                )}
+                    )}
 
-                {/* Bottom Rebars: Tension Rebars in Lapangan (Midspan) OR Compression/holding bars in Tumpuan */}
-                {!isActiveTumpuan ? (
-                  // Lapangan has Tension Rebars on Bottom (Tension side because of positive midspan moments!)
-                  Array.from({ length: Math.min(8, rebarCountLapangan) }).map((_, i) => {
-                    const rowSize = rebarCountLapangan <= 5 ? rebarCountLapangan : Math.ceil(rebarCountLapangan / 2);
-                    const isSecondRow = i >= rowSize;
-                    const indexInRow = isSecondRow ? i - rowSize : i;
-                    const itemsInCurrRow = isSecondRow ? rebarCountLapangan - rowSize : rowSize;
-                    const xCoord = itemsInCurrRow === 1 ? 90 : 15 + 15 + (indexInRow * (150 - 30)) / (itemsInCurrRow - 1);
-                    const yCoord = isSecondRow ? 210 - 17 : 210;
-                    return (
-                      <circle 
-                        key={`bot-tens-${i}`}
-                        cx={xCoord} 
-                        cy={yCoord} 
-                        r={Math.min(9, 3.5 + rebarDiameterLapangan / 4)} 
-                        className="fill-emerald-400 stroke-emerald-100" 
-                        strokeWidth="1"
-                      />
-                    );
-                  })
-                ) : (
-                  // Tumpuan has compression or holding bars on Bottom
-                  activeIsDouble ? (
-                    Array.from({ length: Math.min(6, compRebarCountTumpuan) }).map((_, i) => {
-                      const xCoord = compRebarCountTumpuan === 1 ? 90 : 15 + 15 + (i * (150 - 30)) / (compRebarCountTumpuan - 1);
-                      return (
-                        <circle 
-                          key={`bot-comp-${i}`}
-                          cx={xCoord} 
-                          cy="210" 
-                          r={Math.min(9, 3 + compRebarDiameterTumpuan / 4)} 
-                          className="fill-cyan-500 stroke-cyan-100" 
-                          strokeWidth="1"
-                        />
-                      );
-                    })
-                  ) : (
-                    <>
-                      <circle cx="30" cy="210" r="4" className="fill-slate-600" />
-                      <circle cx="150" cy="210" r="4" className="fill-slate-600" />
-                    </>
-                  )
-                )}
+                    {/* Stirrup Label */}
+                    <text 
+                      x={bNum / 2} 
+                      y={stirrupY + Math.max(15, maxVal * 0.045)} 
+                      textAnchor="middle" 
+                      className="fill-blue-300 uppercase font-mono font-bold"
+                      fontSize={Math.max(8, maxVal * 0.04)}
+                    >
+                      Sengkang Ø{isActiveTumpuan ? stirrupDiameterTumpuan : stirrupDiameterLapangan}
+                    </text>
 
-                {/* Simple Tension label indicator */}
-                <text x="90" y={isActiveTumpuan ? 12 : 228} textAnchor="middle" className="text-[9.5px] font-mono fill-emerald-450 font-bold uppercase">
-                  {isActiveTumpuan ? `${rebarCountTumpuan}D${rebarDiameterTumpuan} (Tarik Atas)` : `${rebarCountLapangan}D${rebarDiameterLapangan} (Tarik Bawah)`}
-                </text>
-              </svg>
+                    {/* Top Rebars */}
+                    {(() => {
+                      const bars: React.ReactNode[] = [];
+                      if (isActiveTumpuan) {
+                        for (let i = 0; i < rebarCountNum; i++) {
+                          const rowSize = rebarCountNum <= 5 ? rebarCountNum : Math.ceil(rebarCountNum / 2);
+                          const isSecondRow = i >= rowSize;
+                          const indexInRow = isSecondRow ? i - rowSize : i;
+                          const itemsInCurrRow = isSecondRow ? rebarCountNum - rowSize : rowSize;
+                          const cx = itemsInCurrRow === 1 ? bNum / 2 : startTopX + (indexInRow * (endTopX - startTopX)) / (itemsInCurrRow - 1);
+                          const cy = isSecondRow ? topY + activeRebarDiameter + 8 : topY;
+                          bars.push(
+                            <circle 
+                              key={`top-tens-${i}`}
+                              cx={cx} 
+                              cy={cy} 
+                              r={activeRebarDiameter / 2} 
+                              className="fill-emerald-400 stroke-emerald-100" 
+                              strokeWidth={Math.max(0.6, activeRebarDiameter * 0.1)}
+                            />
+                          );
+                        }
+                      } else {
+                        if (activeIsDouble && compRebarCountNum > 0) {
+                          for (let i = 0; i < compRebarCountNum; i++) {
+                            const cx = compRebarCountNum === 1 ? bNum / 2 : startTopX + (i * (endTopX - startTopX)) / (compRebarCountNum - 1);
+                            bars.push(
+                              <circle 
+                                key={`top-comp-${i}`}
+                                cx={cx} 
+                                cy={topY} 
+                                r={activeCompRebarDiameter / 2} 
+                                className="fill-cyan-500 stroke-cyan-100" 
+                                strokeWidth={Math.max(0.6, activeCompRebarDiameter * 0.1)}
+                              />
+                            );
+                          }
+                        } else {
+                          const minD = activeCompRebarDiameter > 0 ? activeCompRebarDiameter : 10;
+                          bars.push(
+                            <circle key="top-hold-l" cx={coverNum + activeStirrupDiameter + minD/2} cy={coverNum + activeStirrupDiameter + minD/2} r={minD/2} className="fill-slate-600 stroke-slate-400" strokeWidth="0.5" />,
+                            <circle key="top-hold-r" cx={bNum - (coverNum + activeStirrupDiameter + minD/2)} cy={coverNum + activeStirrupDiameter + minD/2} r={minD/2} className="fill-slate-600 stroke-slate-400" strokeWidth="0.5" />
+                          );
+                        }
+                      }
+                      return bars;
+                    })()}
+
+                    {/* Bottom Rebars */}
+                    {(() => {
+                      const bars: React.ReactNode[] = [];
+                      if (!isActiveTumpuan) {
+                        for (let i = 0; i < rebarCountNum; i++) {
+                          const rowSize = rebarCountNum <= 5 ? rebarCountNum : Math.ceil(rebarCountNum / 2);
+                          const isSecondRow = i >= rowSize;
+                          const indexInRow = isSecondRow ? i - rowSize : i;
+                          const itemsInCurrRow = isSecondRow ? rebarCountNum - rowSize : rowSize;
+                          const cx = itemsInCurrRow === 1 ? bNum / 2 : startBotX + (indexInRow * (endBotX - startBotX)) / (itemsInCurrRow - 1);
+                          const cy = isSecondRow ? bottomY - (activeRebarDiameter + 8) : bottomY;
+                          bars.push(
+                            <circle 
+                              key={`bot-tens-${i}`}
+                              cx={cx} 
+                              cy={cy} 
+                              r={activeRebarDiameter / 2} 
+                              className="fill-emerald-400 stroke-emerald-100" 
+                              strokeWidth={Math.max(0.6, activeRebarDiameter * 0.1)}
+                            />
+                          );
+                        }
+                      } else {
+                        if (activeIsDouble && compRebarCountNum > 0) {
+                          for (let i = 0; i < compRebarCountNum; i++) {
+                            const cx = compRebarCountNum === 1 ? bNum / 2 : startBotX + (i * (endBotX - startBotX)) / (compRebarCountNum - 1);
+                            bars.push(
+                              <circle 
+                                key={`bot-comp-${i}`}
+                                cx={cx} 
+                                cy={bottomY} 
+                                r={activeCompRebarDiameter / 2} 
+                                className="fill-cyan-500 stroke-cyan-100" 
+                                strokeWidth={Math.max(0.6, activeCompRebarDiameter * 0.1)}
+                              />
+                            );
+                          }
+                        } else {
+                          const minD = activeCompRebarDiameter > 0 ? activeCompRebarDiameter : 10;
+                          bars.push(
+                            <circle key="bot-hold-l" cx={coverNum + activeStirrupDiameter + minD/2} cy={hNum - (coverNum + activeStirrupDiameter + minD/2)} r={minD/2} className="fill-slate-600 stroke-slate-400" strokeWidth="0.5" />,
+                            <circle key="bot-hold-r" cx={bNum - (coverNum + activeStirrupDiameter + minD/2)} cy={hNum - (coverNum + activeStirrupDiameter + minD/2)} r={minD/2} className="fill-slate-600 stroke-slate-400" strokeWidth="0.5" />
+                          );
+                        }
+                      }
+                      return bars;
+                    })()}
+
+                    {/* Simple Tension label indicator */}
+                    <text 
+                      x={bNum / 2} 
+                      y={hNum + margin * 0.45} 
+                      textAnchor="middle" 
+                      className="text-[9.5px] font-mono fill-emerald-400 font-bold uppercase"
+                      fontSize={Math.max(9, maxVal * 0.045)}
+                    >
+                      {isActiveTumpuan ? `${activeRebarCount}D${activeRebarDiameter} (Tarik Atas)` : `${activeRebarCount}D${activeRebarDiameter} (Tarik Bawah)`}
+                    </text>
+                  </svg>
+                );
+              })()}
 
               {/* Param details for currently selected zone */}
               <div className="flex-1 space-y-3 px-4 md:px-0 select-text">
