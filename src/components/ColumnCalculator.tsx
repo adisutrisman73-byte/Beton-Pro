@@ -10,15 +10,15 @@ import { Info, HelpCircle, CheckCircle, XCircle, AlertTriangle, Play, Settings, 
 import AiAdvisor from "./AiAdvisor";
 
 export default function ColumnCalculator() {
-  const [b, setB] = useState<number>(400);
-  const [h, setH] = useState<number>(400);
-  const [cover, setCover] = useState<number>(40);
-  const [fc, setFc] = useState<number>(30); // MPa
-  const [fy, setFy] = useState<number>(420); // MPa
+  const [b, setB] = useState<string | number>(400);
+  const [h, setH] = useState<string | number>(400);
+  const [cover, setCover] = useState<string | number>(40);
+  const [fc, setFc] = useState<string | number>(30); // MPa
+  const [fy, setFy] = useState<string | number>(420); // MPa
 
   // Loading demands
-  const [Pu, setPu] = useState<number>(800); // kN
-  const [Mu, setMu] = useState<number>(120); // kNm
+  const [Pu, setPu] = useState<string | number>(800); // kN
+  const [Mu, setMu] = useState<string | number>(120); // kNm
 
   // Rebar settings
   const [rebarDiameter, setRebarDiameter] = useState<number>(22); // D22
@@ -68,15 +68,23 @@ export default function ColumnCalculator() {
   };
 
   useEffect(() => {
-    const rows = generateSymmetricRows(totalBarsCount, h, cover);
+    const safeH = Math.max(100, parseFloat(h as string) || 400);
+    const safeCover = Math.max(10, parseFloat(cover as string) || 40);
+    const safeB = Math.max(100, parseFloat(b as string) || 400);
+    const safeFc = Math.max(5, parseFloat(fc as string) || 30);
+    const safeFy = Math.max(100, parseFloat(fy as string) || 420);
+    const safePu = parseFloat(Pu as string) || 0;
+    const safeMu = Math.max(0, parseFloat(Mu as string) || 0);
+
+    const rows = generateSymmetricRows(totalBarsCount, safeH, safeCover);
     const input: ColumnInput = {
-      b,
-      h,
-      cover,
-      fc,
-      fy,
-      Pu,
-      Mu,
+      b: safeB,
+      h: safeH,
+      cover: safeCover,
+      fc: safeFc,
+      fy: safeFy,
+      Pu: safePu,
+      Mu: safeMu,
       rebarDiameter,
       rebarRows: rows,
     };
@@ -87,10 +95,27 @@ export default function ColumnCalculator() {
   if (!result) return null;
 
   // Formatting values for current input
-  const currentInput = (): ColumnInput => ({
-    b, h, cover, fc, fy, Pu, Mu, rebarDiameter,
-    rebarRows: generateSymmetricRows(totalBarsCount, h, cover)
-  });
+  const currentInput = (): ColumnInput => {
+    const safeH = Math.max(100, parseFloat(h as string) || 400);
+    const safeCover = Math.max(10, parseFloat(cover as string) || 40);
+    const safeB = Math.max(100, parseFloat(b as string) || 400);
+    const safeFc = Math.max(5, parseFloat(fc as string) || 30);
+    const safeFy = Math.max(100, parseFloat(fy as string) || 420);
+    const safePu = parseFloat(Pu as string) || 0;
+    const safeMu = Math.max(0, parseFloat(Mu as string) || 0);
+
+    return {
+      b: safeB,
+      h: safeH,
+      cover: safeCover,
+      fc: safeFc,
+      fy: safeFy,
+      Pu: safePu,
+      Mu: safeMu,
+      rebarDiameter,
+      rebarRows: generateSymmetricRows(totalBarsCount, safeH, safeCover)
+    };
+  };
 
   // Calculate coordinates scaling for PM Diagram viewport
   // Viewport: width=400, height=350, margin=40
@@ -202,10 +227,9 @@ export default function ColumnCalculator() {
               </label>
               <input
                 type="number"
+                step="any"
                 value={b}
-                min={150}
-                max={2000}
-                onChange={(e) => setB(Math.max(100, parseInt(e.target.value) || 0))}
+                onChange={(e) => setB(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded-lg px-3 py-2 text-sm text-slate-200 font-mono transition outline-none"
               />
             </div>
@@ -215,10 +239,9 @@ export default function ColumnCalculator() {
               </label>
               <input
                 type="number"
+                step="any"
                 value={h}
-                min={150}
-                max={2000}
-                onChange={(e) => setH(Math.max(100, parseInt(e.target.value) || 0))}
+                onChange={(e) => setH(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded-lg px-3 py-2 text-sm text-slate-200 font-mono transition outline-none"
               />
             </div>
@@ -229,10 +252,9 @@ export default function ColumnCalculator() {
               </label>
               <input
                 type="number"
+                step="any"
                 value={cover}
-                min={10}
-                max={150}
-                onChange={(e) => setCover(Math.max(10, parseInt(e.target.value) || 0))}
+                onChange={(e) => setCover(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded-lg px-3 py-2 text-sm text-slate-200 font-mono transition outline-none"
               />
             </div>
@@ -242,10 +264,9 @@ export default function ColumnCalculator() {
               </label>
               <input
                 type="number"
+                step="any"
                 value={fc}
-                min={10}
-                max={100}
-                onChange={(e) => setFc(Math.max(10, parseInt(e.target.value) || 0))}
+                onChange={(e) => setFc(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded-lg px-3 py-2 text-sm text-slate-200 font-mono transition outline-none"
               />
             </div>
@@ -256,10 +277,9 @@ export default function ColumnCalculator() {
               </label>
               <input
                 type="number"
+                step="any"
                 value={fy}
-                min={100}
-                max={800}
-                onChange={(e) => setFy(Math.max(100, parseInt(e.target.value) || 0))}
+                onChange={(e) => setFy(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded-lg px-3 py-2 text-sm text-slate-200 font-mono transition outline-none"
               />
             </div>
@@ -339,11 +359,9 @@ export default function ColumnCalculator() {
               <div className="relative">
                 <input
                   type="number"
+                  step="any"
                   value={Pu}
-                  min={-1000}
-                  max={25000}
-                  step={50}
-                  onChange={(e) => setPu(parseInt(e.target.value) || 0)}
+                  onChange={(e) => setPu(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 focus:border-rose-500 rounded-lg px-3 py-2 text-sm text-slate-200 font-mono transition outline-none pr-10"
                 />
                 <span className="absolute right-3 top-2.5 text-xs text-slate-550 select-none">kN</span>
@@ -357,11 +375,9 @@ export default function ColumnCalculator() {
               <div className="relative">
                 <input
                   type="number"
+                  step="any"
                   value={Mu}
-                  min={0}
-                  max={2000}
-                  step={10}
-                  onChange={(e) => setMu(Math.max(0, parseInt(e.target.value) || 0))}
+                  onChange={(e) => setMu(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 focus:border-rose-500 rounded-lg px-3 py-2 text-sm text-slate-200 font-mono transition outline-none pr-10"
                 />
                 <span className="absolute right-3 top-2.5 text-xs text-slate-550 select-none">kNm</span>

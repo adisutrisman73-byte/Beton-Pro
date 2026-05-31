@@ -40,34 +40,34 @@ export default function FoundationCalculator() {
   // ==========================================
   // A. FOOTPLAT STATE & LOGIC
   // ==========================================
-  const [footB, setFootB] = useState<number>(1.5); // meter
-  const [footL, setFootL] = useState<number>(1.5); // meter
-  const [footH, setFootH] = useState<number>(350); // mm
-  const [footCover, setFootCover] = useState<number>(50); // mm
-  const [footColB, setFootColB] = useState<number>(300); // mm
-  const [footColH, setFootColH] = useState<number>(300); // mm
-  const [footFc, setFootFc] = useState<number>(25); // MPa
-  const [footFy, setFootFy] = useState<number>(420); // MPa
-  const [footPu, setFootPu] = useState<number>(350); // kN
-  const [footMuB, setFootMuB] = useState<number>(25); // kNm
-  const [footMuL, setFootMuL] = useState<number>(25); // kNm
-  const [footQAllow, setFootQAllow] = useState<number>(180); // kPa / kPa
+  const [footB, setFootB] = useState<string | number>(1.5); // meter
+  const [footL, setFootL] = useState<string | number>(1.5); // meter
+  const [footH, setFootH] = useState<string | number>(350); // mm
+  const [footCover, setFootCover] = useState<string | number>(50); // mm
+  const [footColB, setFootColB] = useState<string | number>(300); // mm
+  const [footColH, setFootColH] = useState<string | number>(300); // mm
+  const [footFc, setFootFc] = useState<string | number>(25); // MPa
+  const [footFy, setFootFy] = useState<string | number>(420); // MPa
+  const [footPu, setFootPu] = useState<string | number>(350); // kN
+  const [footMuB, setFootMuB] = useState<string | number>(25); // kNm
+  const [footMuL, setFootMuL] = useState<string | number>(25); // kNm
+  const [footQAllow, setFootQAllow] = useState<string | number>(180); // kPa / kPa
   const [footResult, setFootResult] = useState<FootplatResult | null>(null);
 
   useEffect(() => {
     const input: FootplatInput = {
-      B: footB,
-      L: footL,
-      H: footH,
-      cover: footCover,
-      columnB: footColB,
-      columnH: footColH,
-      fc: footFc,
-      fy: footFy,
-      Pu: footPu,
-      MuB: footMuB,
-      MuL: footMuL,
-      qAllowable: footQAllow
+      B: Math.max(0.1, parseFloat(footB as string) || 1.5),
+      L: Math.max(0.1, parseFloat(footL as string) || 1.5),
+      H: Math.max(50, parseFloat(footH as string) || 350),
+      cover: Math.max(10, parseFloat(footCover as string) || 50),
+      columnB: Math.max(50, parseFloat(footColB as string) || 300),
+      columnH: Math.max(50, parseFloat(footColH as string) || 300),
+      fc: Math.max(5, parseFloat(footFc as string) || 25),
+      fy: Math.max(100, parseFloat(footFy as string) || 420),
+      Pu: parseFloat(footPu as string) || 0,
+      MuB: parseFloat(footMuB as string) || 0,
+      MuL: parseFloat(footMuL as string) || 0,
+      qAllowable: Math.max(10, parseFloat(footQAllow as string) || 180)
     };
     setFootResult(analyzeFootplat(input));
   }, [footB, footL, footH, footCover, footColB, footColH, footFc, footFy, footPu, footMuB, footMuL, footQAllow]);
@@ -76,33 +76,33 @@ export default function FoundationCalculator() {
   // B. PILE STATE & LOGIC
   // ==========================================
   const [pileType, setPileType] = useState<"circular_bored" | "square_pancang">("circular_bored");
-  const [pileSize, setPileSize] = useState<number>(400); // mm
-  const [pileLength, setPileLength] = useState<number>(12); // meter
-  const [pileFc, setPileFc] = useState<number>(30); // MPa
-  const [pileFy, setPileFy] = useState<number>(420); // MPa
-  const [pilePu, setPilePu] = useState<number>(450); // kN
-  const [pileMu, setPileMu] = useState<number>(40); // kNm
-  const [pileVu, setPileVu] = useState<number>(20); // kN
-  const [pileQs, setPileQs] = useState<number>(25); // kPa (Skin Friction)
-  const [pileQp, setPileQp] = useState<number>(3500); // kPa (End Bearing)
+  const [pileSize, setPileSize] = useState<string | number>(400); // mm
+  const [pileLength, setPileLength] = useState<string | number>(12); // meter
+  const [pileFc, setPileFc] = useState<string | number>(30); // MPa
+  const [pileFy, setPileFy] = useState<string | number>(420); // MPa
+  const [pilePu, setPilePu] = useState<string | number>(450); // kN
+  const [pileMu, setPileMu] = useState<string | number>(40); // kNm
+  const [pileVu, setPileVu] = useState<string | number>(20); // kN
+  const [pileQs, setPileQs] = useState<string | number>(25); // kPa (Skin Friction)
+  const [pileQp, setPileQp] = useState<string | number>(3500); // kPa (End Bearing)
   const [pileRebarDiameter, setPileRebarDiameter] = useState<number>(16); // mm
-  const [pileRebarCount, setPileRebarCount] = useState<number>(6);
+  const [pileRebarCount, setPileRebarCount] = useState<string | number>(6);
   const [pileResult, setPileResult] = useState<PileResult | null>(null);
 
   useEffect(() => {
     const input: PileInput = {
       pileType,
-      size: pileSize,
-      length: pileLength,
-      fc: pileFc,
-      fy: pileFy,
-      Pu: pilePu,
-      Mu: pileMu,
-      Vu: pileVu,
-      qsSkin: pileQs,
-      qpTip: pileQp,
+      size: Math.max(50, parseFloat(pileSize as string) || 400),
+      length: Math.max(0.5, parseFloat(pileLength as string) || 12),
+      fc: Math.max(5, parseFloat(pileFc as string) || 30),
+      fy: Math.max(100, parseFloat(pileFy as string) || 420),
+      Pu: parseFloat(pilePu as string) || 0,
+      Mu: parseFloat(pileMu as string) || 0,
+      Vu: parseFloat(pileVu as string) || 0,
+      qsSkin: parseFloat(pileQs as string) || 0,
+      qpTip: parseFloat(pileQp as string) || 0,
       rebarDiameter: pileRebarDiameter,
-      rebarCount: pileRebarCount
+      rebarCount: Math.max(4, parseInt(pileRebarCount as string) || 6)
     };
     setPileResult(analyzePile(input));
   }, [pileType, pileSize, pileLength, pileFc, pileFy, pilePu, pileMu, pileVu, pileQs, pileQp, pileRebarDiameter, pileRebarCount]);
@@ -111,37 +111,37 @@ export default function FoundationCalculator() {
   // C. PILE CAP STATE & LOGIC
   // ==========================================
   const [capPiles, setCapPiles] = useState<number>(4); // Group size
-  const [capSpacing, setCapSpacing] = useState<number>(1200); // mm (typically 3D)
-  const [capPileDiam, setCapPileDiam] = useState<number>(400); // mm
-  const [capB, setCapB] = useState<number>(1.8); // meter
-  const [capL, setCapL] = useState<number>(1.8); // meter
-  const [capH, setCapH] = useState<number>(750); // mm
-  const [capColB, setCapColB] = useState<number>(400); // mm
-  const [capColH, setCapColH] = useState<number>(400); // mm
-  const [capFc, setCapFc] = useState<number>(30); // MPa
-  const [capFy, setCapFy] = useState<number>(420); // MPa
-  const [capPu, setCapPu] = useState<number>(1200); // kN
-  const [capMuX, setCapMuX] = useState<number>(80); // kNm
-  const [capMuY, setCapMuY] = useState<number>(50); // kNm
-  const [capCover, setCapCover] = useState<number>(75); // mm
+  const [capSpacing, setCapSpacing] = useState<string | number>(1200); // mm (typically 3D)
+  const [capPileDiam, setCapPileDiam] = useState<string | number>(400); // mm
+  const [capB, setCapB] = useState<string | number>(1.8); // meter
+  const [capL, setCapL] = useState<string | number>(1.8); // meter
+  const [capH, setCapH] = useState<string | number>(750); // mm
+  const [capColB, setCapColB] = useState<string | number>(400); // mm
+  const [capColH, setCapColH] = useState<string | number>(400); // mm
+  const [capFc, setCapFc] = useState<string | number>(30); // MPa
+  const [capFy, setCapFy] = useState<string | number>(420); // MPa
+  const [capPu, setCapPu] = useState<string | number>(1200); // kN
+  const [capMuX, setCapMuX] = useState<string | number>(80); // kNm
+  const [capMuY, setCapMuY] = useState<string | number>(50); // kNm
+  const [capCover, setCapCover] = useState<string | number>(75); // mm
   const [capResult, setCapResult] = useState<PileCapResult | null>(null);
 
   useEffect(() => {
     const input: PileCapInput = {
       pileCount: capPiles,
-      pileSpacing: capSpacing,
-      pileDiameter: capPileDiam,
-      capB,
-      capL,
-      capH,
-      columnB: capColB,
-      columnH: capColH,
-      fc: capFc,
-      fy: capFy,
-      Pu: capPu,
-      MuX: capMuX,
-      MuY: capMuY,
-      cover: capCover
+      pileSpacing: Math.max(100, parseFloat(capSpacing as string) || 1200),
+      pileDiameter: Math.max(50, parseFloat(capPileDiam as string) || 400),
+      capB: Math.max(0.1, parseFloat(capB as string) || 1.8),
+      capL: Math.max(0.2, parseFloat(capL as string) || 1.8),
+      capH: Math.max(100, parseFloat(capH as string) || 750),
+      columnB: Math.max(50, parseFloat(capColB as string) || 400),
+      columnH: Math.max(50, parseFloat(capColH as string) || 400),
+      fc: Math.max(5, parseFloat(capFc as string) || 30),
+      fy: Math.max(100, parseFloat(capFy as string) || 420),
+      Pu: parseFloat(capPu as string) || 0,
+      MuX: parseFloat(capMuX as string) || 0,
+      MuY: parseFloat(capMuY as string) || 0,
+      cover: Math.max(10, parseFloat(capCover as string) || 75)
     };
     setCapResult(analyzePileCap(input));
   }, [capPiles, capSpacing, capPileDiam, capB, capL, capH, capColB, capColH, capFc, capFy, capPu, capMuX, capMuY, capCover]);
@@ -206,9 +206,9 @@ export default function FoundationCalculator() {
                   </label>
                   <input
                     type="number"
-                    step="0.05"
+                    step="any"
                     value={footB}
-                    onChange={(e) => setFootB(Math.max(0.5, parseFloat(e.target.value) || 1.0))}
+                    onChange={(e) => setFootB(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono outline-none"
                   />
                 </div>
@@ -218,9 +218,9 @@ export default function FoundationCalculator() {
                   </label>
                   <input
                     type="number"
-                    step="0.05"
+                    step="any"
                     value={footL}
-                    onChange={(e) => setFootL(Math.max(0.5, parseFloat(e.target.value) || 1.0))}
+                    onChange={(e) => setFootL(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono outline-none"
                   />
                 </div>
@@ -231,8 +231,9 @@ export default function FoundationCalculator() {
                   </label>
                   <input
                     type="number"
+                    step="any"
                     value={footH}
-                    onChange={(e) => setFootH(Math.max(150, parseInt(e.target.value) || 300))}
+                    onChange={(e) => setFootH(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono outline-none"
                   />
                 </div>
@@ -242,8 +243,9 @@ export default function FoundationCalculator() {
                   </label>
                   <input
                     type="number"
+                    step="any"
                     value={footCover}
-                    onChange={(e) => setFootCover(Math.max(30, parseInt(e.target.value) || 50))}
+                    onChange={(e) => setFootCover(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono outline-none"
                   />
                 </div>
@@ -254,8 +256,9 @@ export default function FoundationCalculator() {
                   </label>
                   <input
                     type="number"
+                    step="any"
                     value={footQAllow}
-                    onChange={(e) => setFootQAllow(Math.max(10, parseInt(e.target.value) || 150))}
+                    onChange={(e) => setFootQAllow(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-800 border-yellow-500/30 focus:border-blue-500 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono outline-none"
                   />
                 </div>
@@ -265,8 +268,9 @@ export default function FoundationCalculator() {
                   </label>
                   <input
                     type="number"
+                    step="any"
                     value={footFc}
-                    onChange={(e) => setFootFc(Math.max(10, parseInt(e.target.value) || 25))}
+                    onChange={(e) => setFootFc(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono outline-none"
                   />
                 </div>
@@ -279,8 +283,9 @@ export default function FoundationCalculator() {
                     <label className="block text-[10px] text-slate-400">Lebar c_x (mm)</label>
                     <input
                       type="number"
+                      step="any"
                       value={footColB}
-                      onChange={(e) => setFootColB(Math.max(100, parseInt(e.target.value) || 300))}
+                      onChange={(e) => setFootColB(e.target.value)}
                       className="w-full bg-slate-950 border border-slate-800 rounded px-2 text-xs py-1 text-slate-200 font-mono outline-none"
                     />
                   </div>
@@ -288,8 +293,9 @@ export default function FoundationCalculator() {
                     <label className="block text-[10px] text-slate-400">Panjang c_y (mm)</label>
                     <input
                       type="number"
+                      step="any"
                       value={footColH}
-                      onChange={(e) => setFootColH(Math.max(100, parseInt(e.target.value) || 300))}
+                      onChange={(e) => setFootColH(e.target.value)}
                       className="w-full bg-slate-950 border border-slate-800 rounded px-2 text-xs py-1 text-slate-200 font-mono outline-none"
                     />
                   </div>
@@ -303,8 +309,9 @@ export default function FoundationCalculator() {
                     <label className="block text-[10px] text-slate-400">Pu (kN)</label>
                     <input
                       type="number"
+                      step="any"
                       value={footPu}
-                      onChange={(e) => setFootPu(Math.max(0, parseFloat(e.target.value) || 0))}
+                      onChange={(e) => setFootPu(e.target.value)}
                       className="w-full bg-slate-950 border border-slate-800 rounded px-2 text-xs py-1 text-slate-200 font-mono outline-none"
                     />
                   </div>
@@ -312,8 +319,9 @@ export default function FoundationCalculator() {
                     <label className="block text-[10px] text-slate-400">Mu_B (kNm)</label>
                     <input
                       type="number"
+                      step="any"
                       value={footMuB}
-                      onChange={(e) => setFootMuB(Math.max(0, parseFloat(e.target.value) || 0))}
+                      onChange={(e) => setFootMuB(e.target.value)}
                       className="w-full bg-slate-950 border border-slate-800 rounded px-2 text-xs py-1 text-slate-200 font-mono outline-none"
                     />
                   </div>
@@ -321,8 +329,9 @@ export default function FoundationCalculator() {
                     <label className="block text-[10px] text-slate-400">Mu_L (kNm)</label>
                     <input
                       type="number"
+                      step="any"
                       value={footMuL}
-                      onChange={(e) => setFootMuL(Math.max(0, parseFloat(e.target.value) || 0))}
+                      onChange={(e) => setFootMuL(e.target.value)}
                       className="w-full bg-slate-950 border border-slate-800 rounded px-2 text-xs py-1 text-slate-200 font-mono outline-none"
                     />
                   </div>
@@ -494,8 +503,9 @@ export default function FoundationCalculator() {
                   </label>
                   <input
                     type="number"
+                    step="any"
                     value={pileSize}
-                    onChange={(e) => setPileSize(Math.max(150, parseInt(e.target.value) || 300))}
+                    onChange={(e) => setPileSize(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono outline-none"
                   />
                 </div>
@@ -505,8 +515,9 @@ export default function FoundationCalculator() {
                   </label>
                   <input
                     type="number"
+                    step="any"
                     value={pileLength}
-                    onChange={(e) => setPileLength(Math.max(1, parseInt(e.target.value) || 10))}
+                    onChange={(e) => setPileLength(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono outline-none"
                   />
                 </div>
@@ -517,8 +528,9 @@ export default function FoundationCalculator() {
                   </label>
                   <input
                     type="number"
+                    step="any"
                     value={pileQs}
-                    onChange={(e) => setPileQs(Math.max(0, parseInt(e.target.value) || 20))}
+                    onChange={(e) => setPileQs(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono outline-none"
                   />
                 </div>
@@ -528,8 +540,9 @@ export default function FoundationCalculator() {
                   </label>
                   <input
                     type="number"
+                    step="any"
                     value={pileQp}
-                    onChange={(e) => setPileQp(Math.max(0, parseInt(e.target.value) || 2500))}
+                    onChange={(e) => setPileQp(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono outline-none"
                   />
                 </div>
@@ -540,8 +553,9 @@ export default function FoundationCalculator() {
                   </label>
                   <input
                     type="number"
+                    step="any"
                     value={pileFc}
-                    onChange={(e) => setPileFc(Math.max(10, parseInt(e.target.value) || 30))}
+                    onChange={(e) => setPileFc(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono outline-none"
                   />
                 </div>
@@ -551,8 +565,9 @@ export default function FoundationCalculator() {
                   </label>
                   <input
                     type="number"
+                    step="any"
                     value={pileFy}
-                    onChange={(e) => setPileFy(Math.max(100, parseInt(e.target.value) || 420))}
+                    onChange={(e) => setPileFy(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono outline-none"
                   />
                 </div>
@@ -577,8 +592,9 @@ export default function FoundationCalculator() {
                     <label className="block text-[10px] text-slate-400">Jumlah Besi (n)</label>
                     <input
                       type="number"
+                      step="any"
                       value={pileRebarCount}
-                      onChange={(e) => setPileRebarCount(Math.max(4, parseInt(e.target.value) || 6))}
+                      onChange={(e) => setPileRebarCount(e.target.value)}
                       className="w-full bg-slate-950 border border-slate-800 rounded px-2 text-xs py-1 text-slate-200 font-mono outline-none"
                     />
                   </div>
@@ -592,8 +608,9 @@ export default function FoundationCalculator() {
                     <label className="block text-[10px] text-slate-400">Gaya Aksial Pu(kN)</label>
                     <input
                       type="number"
+                      step="any"
                       value={pilePu}
-                      onChange={(e) => setPilePu(Math.max(0, parseInt(e.target.value) || 0))}
+                      onChange={(e) => setPilePu(e.target.value)}
                       className="w-full bg-slate-950 border border-slate-800 rounded px-2 text-xs py-1 text-slate-200 font-mono outline-none"
                     />
                   </div>
@@ -601,8 +618,9 @@ export default function FoundationCalculator() {
                     <label className="block text-[10px] text-slate-400">Momen Mu(kNm)</label>
                     <input
                       type="number"
+                      step="any"
                       value={pileMu}
-                      onChange={(e) => setPileMu(Math.max(0, parseInt(e.target.value) || 0))}
+                      onChange={(e) => setPileMu(e.target.value)}
                       className="w-full bg-slate-950 border border-slate-800 rounded px-2 text-xs py-1 text-slate-200 font-mono outline-none"
                     />
                   </div>
@@ -610,8 +628,9 @@ export default function FoundationCalculator() {
                     <label className="block text-[10px] text-slate-400">Geser Vu(kN)</label>
                     <input
                       type="number"
+                      step="any"
                       value={pileVu}
-                      onChange={(e) => setPileVu(Math.max(0, parseInt(e.target.value) || 0))}
+                      onChange={(e) => setPileVu(e.target.value)}
                       className="w-full bg-slate-950 border border-slate-800 rounded px-2 text-xs py-1 text-slate-200 font-mono outline-none"
                     />
                   </div>
@@ -787,8 +806,9 @@ export default function FoundationCalculator() {
                   </label>
                   <input
                     type="number"
+                    step="any"
                     value={capSpacing}
-                    onChange={(e) => setCapSpacing(Math.max(300, parseInt(e.target.value) || 900))}
+                    onChange={(e) => setCapSpacing(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono outline-none"
                   />
                 </div>
@@ -799,9 +819,9 @@ export default function FoundationCalculator() {
                   </label>
                   <input
                     type="number"
-                    step="0.05"
+                    step="any"
                     value={capB}
-                    onChange={(e) => setCapB(Math.max(0.6, parseFloat(e.target.value) || 1.5))}
+                    onChange={(e) => setCapB(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono outline-none"
                   />
                 </div>
@@ -811,9 +831,9 @@ export default function FoundationCalculator() {
                   </label>
                   <input
                     type="number"
-                    step="0.05"
+                    step="any"
                     value={capL}
-                    onChange={(e) => setCapL(Math.max(0.6, parseFloat(e.target.value) || 1.5))}
+                    onChange={(e) => setCapL(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono outline-none"
                   />
                 </div>
@@ -824,8 +844,9 @@ export default function FoundationCalculator() {
                   </label>
                   <input
                     type="number"
+                    step="any"
                     value={capH}
-                    onChange={(e) => setCapH(Math.max(300, parseInt(e.target.value) || 600))}
+                    onChange={(e) => setCapH(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono outline-none"
                   />
                 </div>
@@ -835,8 +856,9 @@ export default function FoundationCalculator() {
                   </label>
                   <input
                     type="number"
+                    step="any"
                     value={capFc}
-                    onChange={(e) => setCapFc(Math.max(10, parseInt(e.target.value) || 30))}
+                    onChange={(e) => setCapFc(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-lg px-3 py-1.5 text-xs text-slate-200 font-mono outline-none"
                   />
                 </div>
@@ -849,8 +871,9 @@ export default function FoundationCalculator() {
                     <label className="block text-[10px] text-slate-400">Diameter Tiang (mm)</label>
                     <input
                       type="number"
+                      step="any"
                       value={capPileDiam}
-                      onChange={(e) => setCapPileDiam(Math.max(100, parseInt(e.target.value) || 400))}
+                      onChange={(e) => setCapPileDiam(e.target.value)}
                       className="w-full bg-slate-950 border border-slate-800 rounded px-2 text-xs py-1 text-slate-200 font-mono outline-none"
                     />
                   </div>
@@ -858,8 +881,9 @@ export default function FoundationCalculator() {
                     <label className="block text-[10px] text-slate-400">Selimut d' (Cover)</label>
                     <input
                       type="number"
+                      step="any"
                       value={capCover}
-                      onChange={(e) => setCapCover(Math.max(30, parseInt(e.target.value) || 75))}
+                      onChange={(e) => setCapCover(e.target.value)}
                       className="w-full bg-slate-950 border border-slate-800 rounded px-2 text-xs py-1 text-slate-200 font-mono outline-none"
                     />
                   </div>
@@ -873,8 +897,9 @@ export default function FoundationCalculator() {
                     <label className="block text-[10px] text-slate-400">Pu (kN)</label>
                     <input
                       type="number"
+                      step="any"
                       value={capPu}
-                      onChange={(e) => setCapPu(Math.max(0, parseInt(e.target.value) || 0))}
+                      onChange={(e) => setCapPu(e.target.value)}
                       className="w-full bg-slate-950 border border-slate-800 rounded px-2 text-xs py-1 text-slate-200 font-mono outline-none"
                     />
                   </div>
@@ -882,8 +907,9 @@ export default function FoundationCalculator() {
                     <label className="block text-[10px] text-slate-400">Mu_X (kNm)</label>
                     <input
                       type="number"
+                      step="any"
                       value={capMuX}
-                      onChange={(e) => setCapMuX(Math.max(0, parseInt(e.target.value) || 0))}
+                      onChange={(e) => setCapMuX(e.target.value)}
                       className="w-full bg-slate-950 border border-slate-800 rounded px-2 text-xs py-1 text-slate-200 font-mono outline-none"
                     />
                   </div>
@@ -891,8 +917,9 @@ export default function FoundationCalculator() {
                     <label className="block text-[10px] text-slate-400">Mu_Y (kNm)</label>
                     <input
                       type="number"
+                      step="any"
                       value={capMuY}
-                      onChange={(e) => setCapMuY(Math.max(0, parseInt(e.target.value) || 0))}
+                      onChange={(e) => setCapMuY(e.target.value)}
                       className="w-full bg-slate-950 border border-slate-800 rounded px-2 text-xs py-1 text-slate-200 font-mono outline-none"
                     />
                   </div>

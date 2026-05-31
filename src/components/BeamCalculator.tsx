@@ -11,39 +11,39 @@ import AiAdvisor from "./AiAdvisor";
 
 export default function BeamCalculator() {
   // 1. Shared Beam Geometry & Material State
-  const [b, setB] = useState<number>(300);
-  const [h, setH] = useState<number>(500);
-  const [cover, setCover] = useState<number>(40);
-  const [fc, setFc] = useState<number>(30); // MPa
-  const [fy, setFy] = useState<number>(420); // MPa
-  const [fys, setFys] = useState<number>(280); // MPa
+  const [b, setB] = useState<string | number>(300);
+  const [h, setH] = useState<string | number>(500);
+  const [cover, setCover] = useState<string | number>(40);
+  const [fc, setFc] = useState<string | number>(30); // MPa
+  const [fy, setFy] = useState<string | number>(420); // MPa
+  const [fys, setFys] = useState<string | number>(280); // MPa
 
   // 2. Zone Tab Selection
   const [activeZone, setActiveZone] = useState<"tumpuan" | "lapangan">("tumpuan");
 
   // 3. Tumpuan (Support Zone) Parameters
-  const [MuTumpuan, setMuTumpuan] = useState<number>(220); // kNm
-  const [VuTumpuan, setVuTumpuan] = useState<number>(120); // kN
+  const [MuTumpuan, setMuTumpuan] = useState<string | number>(220); // kNm
+  const [VuTumpuan, setVuTumpuan] = useState<string | number>(120); // kN
   const [rebarDiameterTumpuan, setRebarDiameterTumpuan] = useState<number>(19); // D19
-  const [rebarCountTumpuan, setRebarCountTumpuan] = useState<number>(5);
+  const [rebarCountTumpuan, setRebarCountTumpuan] = useState<string | number>(5);
   const [isDoubleTumpuan, setIsDoubleTumpuan] = useState<boolean>(false);
   const [compRebarDiameterTumpuan, setCompRebarDiameterTumpuan] = useState<number>(13);
-  const [compRebarCountTumpuan, setCompRebarCountTumpuan] = useState<number>(2);
+  const [compRebarCountTumpuan, setCompRebarCountTumpuan] = useState<string | number>(2);
   const [stirrupDiameterTumpuan, setStirrupDiameterTumpuan] = useState<number>(10);
   const [stirrupLegsTumpuan, setStirrupLegsTumpuan] = useState<number>(2);
-  const [stirrupSpacingTumpuan, setStirrupSpacingTumpuan] = useState<number>(100); // mm
+  const [stirrupSpacingTumpuan, setStirrupSpacingTumpuan] = useState<string | number>(100); // mm
 
   // 4. Lapangan (Mid-span Zone) Parameters
-  const [MuLapangan, setMuLapangan] = useState<number>(140); // kNm
-  const [VuLapangan, setVuLapangan] = useState<number>(60); // kN
+  const [MuLapangan, setMuLapangan] = useState<string | number>(140); // kNm
+  const [VuLapangan, setVuLapangan] = useState<string | number>(60); // kN
   const [rebarDiameterLapangan, setRebarDiameterLapangan] = useState<number>(19); // D19
-  const [rebarCountLapangan, setRebarCountLapangan] = useState<number>(3);
+  const [rebarCountLapangan, setRebarCountLapangan] = useState<string | number>(3);
   const [isDoubleLapangan, setIsDoubleLapangan] = useState<boolean>(false);
   const [compRebarDiameterLapangan, setCompRebarDiameterLapangan] = useState<number>(13);
-  const [compRebarCountLapangan, setCompRebarCountLapangan] = useState<number>(2);
+  const [compRebarCountLapangan, setCompRebarCountLapangan] = useState<string | number>(2);
   const [stirrupDiameterLapangan, setStirrupDiameterLapangan] = useState<number>(10);
   const [stirrupLegsLapangan, setStirrupLegsLapangan] = useState<number>(2);
-  const [stirrupSpacingLapangan, setStirrupSpacingLapangan] = useState<number>(180); // mm
+  const [stirrupSpacingLapangan, setStirrupSpacingLapangan] = useState<string | number>(180); // mm
 
   // Calculated Results
   const [resultTumpuan, setResultTumpuan] = useState<BeamAnalysisResult | null>(null);
@@ -51,23 +51,36 @@ export default function BeamCalculator() {
 
   // Auto calculate Tumpuan Zone
   useEffect(() => {
+    const safeB = Math.max(50, parseFloat(b as string) || 300);
+    const safeH = Math.max(50, parseFloat(h as string) || 500);
+    const safeCover = Math.max(10, parseFloat(cover as string) || 40);
+    const safeFc = Math.max(5, parseFloat(fc as string) || 30);
+    const safeFy = Math.max(100, parseFloat(fy as string) || 420);
+    const safeFys = Math.max(100, parseFloat(fys as string) || 280);
+
+    const safeMu = Math.max(0, parseFloat(MuTumpuan as string) || 0);
+    const safeVu = Math.max(0, parseFloat(VuTumpuan as string) || 0);
+    const safeRebarCount = Math.max(1, parseFloat(rebarCountTumpuan as string) || 2);
+    const safeCompRebarCount = Math.max(0, parseFloat(compRebarCountTumpuan as string) || 0);
+    const safeStirrupSpacing = Math.max(10, parseFloat(stirrupSpacingTumpuan as string) || 100);
+
     const input: BeamInput = {
-      b,
-      h,
-      cover,
-      fc,
-      fy,
-      fys,
-      Mu: MuTumpuan,
-      Vu: VuTumpuan,
+      b: safeB,
+      h: safeH,
+      cover: safeCover,
+      fc: safeFc,
+      fy: safeFy,
+      fys: safeFys,
+      Mu: safeMu,
+      Vu: safeVu,
       rebarDiameter: rebarDiameterTumpuan,
-      rebarCount: rebarCountTumpuan,
+      rebarCount: safeRebarCount,
       stirrupDiameter: stirrupDiameterTumpuan,
       stirrupLegs: stirrupLegsTumpuan,
-      stirrupSpacing: stirrupSpacingTumpuan,
+      stirrupSpacing: safeStirrupSpacing,
       isDoubleReinforced: isDoubleTumpuan,
       compressionRebarDiameter: compRebarDiameterTumpuan,
-      compressionRebarCount: compRebarCountTumpuan,
+      compressionRebarCount: safeCompRebarCount,
     };
     setResultTumpuan(analyzeBeam(input));
   }, [
@@ -80,23 +93,36 @@ export default function BeamCalculator() {
 
   // Auto calculate Lapangan Zone
   useEffect(() => {
+    const safeB = Math.max(50, parseFloat(b as string) || 300);
+    const safeH = Math.max(50, parseFloat(h as string) || 500);
+    const safeCover = Math.max(10, parseFloat(cover as string) || 40);
+    const safeFc = Math.max(5, parseFloat(fc as string) || 30);
+    const safeFy = Math.max(100, parseFloat(fy as string) || 420);
+    const safeFys = Math.max(100, parseFloat(fys as string) || 280);
+
+    const safeMu = Math.max(0, parseFloat(MuLapangan as string) || 0);
+    const safeVu = Math.max(0, parseFloat(VuLapangan as string) || 0);
+    const safeRebarCount = Math.max(1, parseFloat(rebarCountLapangan as string) || 2);
+    const safeCompRebarCount = Math.max(0, parseFloat(compRebarCountLapangan as string) || 0);
+    const safeStirrupSpacing = Math.max(10, parseFloat(stirrupSpacingLapangan as string) || 180);
+
     const input: BeamInput = {
-      b,
-      h,
-      cover,
-      fc,
-      fy,
-      fys,
-      Mu: MuLapangan,
-      Vu: VuLapangan,
+      b: safeB,
+      h: safeH,
+      cover: safeCover,
+      fc: safeFc,
+      fy: safeFy,
+      fys: safeFys,
+      Mu: safeMu,
+      Vu: safeVu,
       rebarDiameter: rebarDiameterLapangan,
-      rebarCount: rebarCountLapangan,
+      rebarCount: safeRebarCount,
       stirrupDiameter: stirrupDiameterLapangan,
       stirrupLegs: stirrupLegsLapangan,
-      stirrupSpacing: stirrupSpacingLapangan,
+      stirrupSpacing: safeStirrupSpacing,
       isDoubleReinforced: isDoubleLapangan,
       compressionRebarDiameter: compRebarDiameterLapangan,
-      compressionRebarCount: compRebarCountLapangan,
+      compressionRebarCount: safeCompRebarCount,
     };
     setResultLapangan(analyzeBeam(input));
   }, [
@@ -241,10 +267,9 @@ export default function BeamCalculator() {
                 </label>
                 <input
                   type="number"
+                  step="any"
                   value={b}
-                  min={100}
-                  max={1500}
-                  onChange={(e) => setB(Math.max(50, parseInt(e.target.value) || 0))}
+                  onChange={(e) => setB(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-lg px-3 py-2 text-sm text-slate-200 font-mono transition outline-none"
                 />
               </div>
@@ -254,10 +279,9 @@ export default function BeamCalculator() {
                 </label>
                 <input
                   type="number"
+                  step="any"
                   value={h}
-                  min={100}
-                  max={2500}
-                  onChange={(e) => setH(Math.max(50, parseInt(e.target.value) || 0))}
+                  onChange={(e) => setH(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-lg px-3 py-2 text-sm text-slate-200 font-mono transition outline-none"
                 />
               </div>
@@ -268,10 +292,9 @@ export default function BeamCalculator() {
                 </label>
                 <input
                   type="number"
+                  step="any"
                   value={cover}
-                  min={10}
-                  max={200}
-                  onChange={(e) => setCover(Math.max(10, parseInt(e.target.value) || 0))}
+                  onChange={(e) => setCover(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-lg px-3 py-2 text-sm text-slate-200 font-mono transition outline-none"
                 />
               </div>
@@ -281,10 +304,9 @@ export default function BeamCalculator() {
                 </label>
                 <input
                   type="number"
+                  step="any"
                   value={fc}
-                  min={10}
-                  max={200}
-                  onChange={(e) => setFc(Math.max(10, parseInt(e.target.value) || 0))}
+                  onChange={(e) => setFc(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-lg px-3 py-2 text-sm text-slate-200 font-mono transition outline-none"
                 />
               </div>
@@ -295,10 +317,9 @@ export default function BeamCalculator() {
                 </label>
                 <input
                   type="number"
+                  step="any"
                   value={fy}
-                  min={100}
-                  max={1000}
-                  onChange={(e) => setFy(Math.max(100, parseInt(e.target.value) || 0))}
+                  onChange={(e) => setFy(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-lg px-3 py-2 text-sm text-slate-200 font-mono transition outline-none"
                 />
               </div>
@@ -308,10 +329,9 @@ export default function BeamCalculator() {
                 </label>
                 <input
                   type="number"
+                  step="any"
                   value={fys}
-                  min={100}
-                  max={1000}
-                  onChange={(e) => setFys(Math.max(100, parseInt(e.target.value) || 0))}
+                  onChange={(e) => setFys(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-lg px-3 py-2 text-sm text-slate-200 font-mono transition outline-none"
                 />
               </div>
@@ -354,8 +374,7 @@ export default function BeamCalculator() {
 
             {/* Bending forces & rebar layout input */}
             <div className="space-y-4">
-              
-              {/* Load demands specific to current active zone */}
+                           {/* Load demands specific to current active zone */}
               <div className="grid grid-cols-2 gap-4 bg-slate-950/40 p-3 rounded-lg border border-slate-850">
                 <div>
                   <label className="block text-xs text-slate-400 mb-1">
@@ -364,11 +383,11 @@ export default function BeamCalculator() {
                   <div className="relative">
                     <input
                       type="number"
+                      step="any"
                       value={isActiveTumpuan ? MuTumpuan : MuLapangan}
                       onChange={(e) => {
-                        const val = Math.max(0, parseFloat(e.target.value) || 0);
-                        if (isActiveTumpuan) setMuTumpuan(val);
-                        else setMuLapangan(val);
+                        if (isActiveTumpuan) setMuTumpuan(e.target.value);
+                        else setMuLapangan(e.target.value);
                       }}
                       className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 rounded p-1.5 text-xs text-slate-200 font-mono outline-none"
                     />
@@ -382,11 +401,11 @@ export default function BeamCalculator() {
                   <div className="relative">
                     <input
                       type="number"
+                      step="any"
                       value={isActiveTumpuan ? VuTumpuan : VuLapangan}
                       onChange={(e) => {
-                        const val = Math.max(0, parseFloat(e.target.value) || 0);
-                        if (isActiveTumpuan) setVuTumpuan(val);
-                        else setVuLapangan(val);
+                        if (isActiveTumpuan) setVuTumpuan(e.target.value);
+                        else setVuLapangan(e.target.value);
                       }}
                       className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 rounded p-1.5 text-xs text-slate-200 font-mono outline-none"
                     />
@@ -419,13 +438,11 @@ export default function BeamCalculator() {
                     <label className="block text-[11px] text-slate-400 mb-1">Jumlah Batang (n)</label>
                     <input
                       type="number"
+                      step="any"
                       value={activeRebarCount}
-                      min={1}
-                      max={30}
                       onChange={(e) => {
-                        const val = Math.max(1, parseInt(e.target.value) || 1);
-                        if (isActiveTumpuan) setRebarCountTumpuan(val);
-                        else setRebarCountLapangan(val);
+                        if (isActiveTumpuan) setRebarCountTumpuan(e.target.value);
+                        else setRebarCountLapangan(e.target.value);
                       }}
                       className="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 font-mono focus:border-blue-500 outline-none"
                     />
@@ -476,13 +493,11 @@ export default function BeamCalculator() {
                       <label className="block text-[11px] mb-1 text-slate-400">Jumlah Batang (n')</label>
                       <input
                         type="number"
+                        step="any"
                         value={activeCompRebarCount}
-                        min={1}
-                        max={30}
                         onChange={(e) => {
-                          const val = Math.max(1, parseInt(e.target.value) || 1);
-                          if (isActiveTumpuan) setCompRebarCountTumpuan(val);
-                          else setCompRebarCountLapangan(val);
+                          if (isActiveTumpuan) setCompRebarCountTumpuan(e.target.value);
+                          else setCompRebarCountLapangan(e.target.value);
                         }}
                         className="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 font-mono focus:border-blue-500 outline-none"
                       />
@@ -515,11 +530,10 @@ export default function BeamCalculator() {
                     <label className="block text-[10px] text-slate-400 mb-1">Jumlah Kaki</label>
                     <input
                       type="number"
+                      step="any"
                       value={isActiveTumpuan ? stirrupLegsTumpuan : stirrupLegsLapangan}
-                      min={2}
-                      max={10}
                       onChange={(e) => {
-                        const val = Math.max(2, parseInt(e.target.value) || 2);
+                        const val = parseInt(e.target.value) || 2;
                         if (isActiveTumpuan) setStirrupLegsTumpuan(val);
                         else setStirrupLegsLapangan(val);
                       }}
@@ -530,13 +544,11 @@ export default function BeamCalculator() {
                     <label className="block text-[10px] text-slate-400 mb-1">Spasi s (mm)</label>
                     <input
                       type="number"
+                      step="any"
                       value={activeStirrupSpacing}
-                      min={30}
-                      max={600}
                       onChange={(e) => {
-                        const val = Math.max(10, parseInt(e.target.value) || 150);
-                        if (isActiveTumpuan) setStirrupSpacingTumpuan(val);
-                        else setStirrupSpacingLapangan(val);
+                        if (isActiveTumpuan) setStirrupSpacingTumpuan(e.target.value);
+                        else setStirrupSpacingLapangan(e.target.value);
                       }}
                       className="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1 text-xs text-slate-200 font-mono focus:border-blue-500 outline-none"
                     />
